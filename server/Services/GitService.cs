@@ -51,6 +51,79 @@ namespace GitWeb.Api.Services
             return items.ToList();
         }
 
+        public object? GetCommitDetails(string path, string sha)
+        {
+            using var repo = Open(path);
+            var commit = repo.Lookup<Commit>(sha);
+            if (commit == null) return null;
+
+            var parent = commit.Parents.FirstOrDefault();
+            var changes = parent != null
+                ? repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree)
+                : null;
+
+            var files = new List<object>();
+
+            if (parent == null)
+            {
+                // First commit - all files are additions
+                foreach (var entry in TraverseTreeWithStatus(commit.Tree))
+                {
+                    files.Add(new
+                    {
+                        path = entry.path,
+                        status = "Added",
+                        oldPath = (string?)null
+                    });
+                }
+            }
+            else
+            {
+                // Regular commit - show changes
+                foreach (var change in changes!)
+                {
+                    files.Add(new
+                    {
+                        path = change.Path,
+                        status = change.Status.ToString(),
+                        oldPath = change.OldPath != change.Path ? change.OldPath : null
+                    });
+                }
+            }
+
+            return new
+            {
+                sha = commit.Sha,
+                author = commit.Author.Name,
+                authorEmail = commit.Author.Email,
+                date = commit.Author.When.ToLocalTime(),
+                message = commit.Message,
+                messageShort = commit.MessageShort,
+                filesChanged = files.Count,
+                files = files.OrderBy(f => ((dynamic)f).path).ToList()
+            };
+        }
+
+        IEnumerable<(string path, string status)> TraverseTreeWithStatus(Tree tree, string prefix = "")
+        {
+            foreach (var entry in tree)
+            {
+                var currentPath = string.IsNullOrEmpty(prefix)
+                    ? entry.Name
+                    : Path.Combine(prefix, entry.Name).Replace('\\', '/');
+
+                if (entry.Target is Blob)
+                {
+                    yield return (currentPath, "Added");
+                }
+                else if (entry.Target is Tree sub)
+                {
+                    foreach (var item in TraverseTreeWithStatus(sub, currentPath))
+                        yield return item;
+                }
+            }
+        }
+
         int GetChangedFilesCount(Repository repo, Commit commit)
         {
             var parent = commit.Parents.FirstOrDefault();

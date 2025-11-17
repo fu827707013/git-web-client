@@ -7,18 +7,52 @@ namespace GitWeb.Api.Controllers
     public class RepoController : ControllerBase
     {
         private readonly GitService _git;
-        public RepoController(GitService git)
+        private readonly RepoConfigService _config;
+
+        public RepoController(GitService git, RepoConfigService config)
         {
             _git = git;
+            _config = config;
         }
 
-        public record LoadRepoRequest(string path);
+        public record LoadRepoRequest(string path, string? name = null);
 
         [HttpPost("load")]
         public IActionResult Load([FromBody] LoadRepoRequest req)
         {
             if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
+
+            // 如果提供了仓库名称，保存到配置文件
+            if (!string.IsNullOrWhiteSpace(req.name))
+            {
+                _config.AddOrUpdateRepository(req.name, req.path);
+            }
+
             return Ok(new { path = req.path, ok = true });
+        }
+
+        [HttpGet("saved")]
+        public IActionResult GetSavedRepositories()
+        {
+            var repos = _config.GetRepositories();
+            return Ok(repos);
+        }
+
+        [HttpDelete("saved/{name}")]
+        public IActionResult DeleteSavedRepository(string name)
+        {
+            _config.RemoveRepository(name);
+            return Ok(new { ok = true });
+        }
+
+        [HttpGet("saved/{name}")]
+        public IActionResult GetSavedRepository(string name)
+        {
+            var repo = _config.GetRepository(name);
+            if (repo == null) return NotFound();
+
+            _config.UpdateLastAccessed(name);
+            return Ok(repo);
         }
 
         [HttpGet("status")]
@@ -35,6 +69,18 @@ namespace GitWeb.Api.Controllers
             if (!_git.IsValidRepoPath(path)) return BadRequest("Invalid repo path");
             var items = _git.GetCommits(path, page, pageSize, author, q);
             return Ok(new { items });
+        }
+
+        [HttpGet("commit-details")]
+        public IActionResult GetCommitDetails([FromQuery] string path, [FromQuery] string sha)
+        {
+            if (!_git.IsValidRepoPath(path)) return BadRequest("Invalid repo path");
+            if (string.IsNullOrWhiteSpace(sha)) return BadRequest("SHA is required");
+
+            var details = _git.GetCommitDetails(path, sha);
+            if (details == null) return NotFound("Commit not found");
+
+            return Ok(details);
         }
     }
 }

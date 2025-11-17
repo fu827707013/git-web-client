@@ -9,6 +9,7 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 builder.Services.AddSingleton<GitService>();
+builder.Services.AddSingleton<RepoConfigService>();
 var app = builder.Build();
 app.UseCors("dev");
 app.MapControllers();
