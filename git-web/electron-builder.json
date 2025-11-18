@@ -1,0 +1,30 @@
+{
+  "appId": "com.gitwebclient.app",
+  "productName": "Git Web Client",
+  "directories": {
+    "output": "release",
+    "buildResources": "resources"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "../server/bin/Release/net10.0/win-x64/publish",
+      "to": "server",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "resources/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Git Web Client"
+  }
+}

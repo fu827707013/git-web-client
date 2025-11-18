@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 9001",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "cross-env NODE_ENV=development vite --port 9001",
+    "electron:start": "electron .",
+    "electron:build": "npm run build && electron-builder --win"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -15,8 +19,15 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.1",
+    "electron-builder": "^26.0.12",
     "vite": "^5.0.0",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6",
     "vite-plugin-vuetify": "^2.1.2",
-    "vuetify": "^3.10.11"
+    "vuetify": "^3.10.11",
+    "wait-on": "^9.0.3"
   }
 }
