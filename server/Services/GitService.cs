@@ -17,15 +17,185 @@ namespace GitWeb.Api.Services
             return new Repository(path);
         }
 
+        // 树节点类 - 优化：扁平化结构，使用短字段名减少 JSON 大小
+        public class TreeNode
+        {
+            public string n { get; set; }  // name
+            public string p { get; set; }  // path
+            public bool f { get; set; }    // isFolder
+            public List<TreeNode>? c { get; set; }  // children (nullable to save space)
+            public string? s { get; set; }  // status (null for folders, "M"/"A"/"D"/"R" for files)
+
+            public TreeNode(string name, string path, bool isFolder = false, string? status = null)
+            {
+                this.n = name;
+                this.p = path;
+                this.f = isFolder;
+                this.c = isFolder ? new List<TreeNode>() : null;
+                this.s = status;
+            }
+        }
+
         public object GetStatus(string path)
         {
             using var repo = Open(path);
             var branch = repo.Head.FriendlyName;
             var remote = repo.Network.Remotes.FirstOrDefault()?.Url ?? "";
             var status = repo.RetrieveStatus();
+
+            // 辅助方法：将 FileStatus 转换为简洁的状态字符串
+            string GetSimpleStatus(FileStatus state)
+            {
+                if ((state & FileStatus.NewInWorkdir) != 0 || (state & FileStatus.NewInIndex) != 0)
+                    return "A"; // Added
+                if ((state & FileStatus.DeletedFromWorkdir) != 0 || (state & FileStatus.DeletedFromIndex) != 0)
+                    return "D"; // Deleted
+                if ((state & FileStatus.ModifiedInWorkdir) != 0 || (state & FileStatus.ModifiedInIndex) != 0)
+                    return "M"; // Modified
+                if ((state & FileStatus.RenamedInWorkdir) != 0 || (state & FileStatus.RenamedInIndex) != 0)
+                    return "R"; // Renamed
+                return "U"; // Unknown
+            }
+
+            // 构建树形结构 - 优化版本
+            TreeNode BuildTree(IEnumerable<StatusEntry> entries)
+            {
+                var root = new TreeNode("root", "", true);
+
+                foreach (var entry in entries)
+                {
+                    var filePath = entry.FilePath.Replace('\\', '/');
+                    var pathParts = filePath.Split('/');
+                    var currentNode = root;
+
+                    for (int i = 0; i < pathParts.Length; i++)
+                    {
+                        var part = pathParts[i];
+                        var isLastPart = i == pathParts.Length - 1;
+                        var currentPath = string.Join("/", pathParts.Take(i + 1));
+
+                        // 查找是否已存在该节点
+                        var existingNode = currentNode.c?.FirstOrDefault(c => c.n == part);
+
+                        if (existingNode == null)
+                        {
+                            // 创建新节点（扁平化结构）
+                            var newNode = new TreeNode(
+                                part,
+                                currentPath,
+                                !isLastPart,
+                                isLastPart ? GetSimpleStatus(entry.State) : null
+                            );
+                            currentNode.c?.Add(newNode);
+                            currentNode = newNode;
+                        }
+                        else
+                        {
+                            currentNode = existingNode;
+                        }
+                    }
+                }
+
+                // 递归排序：文件夹在前，文件在后
+                void SortTree(TreeNode node)
+                {
+                    if (node.c != null && node.c.Count > 0)
+                    {
+                        node.c = node.c
+                            .OrderBy(c => c.f ? 0 : 1)
+                            .ThenBy(c => c.n)
+                            .ToList();
+                        foreach (var child in node.c)
+                        {
+                            SortTree(child);
+                        }
+                    }
+                }
+
+                SortTree(root);
+                return root;
+            }
+
+            // 获取未暂存和已暂存的文件
+            var unstagedEntries = status.Where(s => s.State != FileStatus.Ignored && s.State != FileStatus.Unaltered)
+                                        .Where(s => (s.State & FileStatus.ModifiedInWorkdir) != 0 ||
+                                                   (s.State & FileStatus.NewInWorkdir) != 0 ||
+                                                   (s.State & FileStatus.DeletedFromWorkdir) != 0)
+                                        .ToList();
+
+            var stagedEntries = status.Where(s => (s.State & FileStatus.ModifiedInIndex) != 0 ||
+                                                 (s.State & FileStatus.NewInIndex) != 0 ||
+                                                 (s.State & FileStatus.DeletedFromIndex) != 0)
+                                     .ToList();
+
+            // 构建树形结构
+            var unstagedTree = BuildTree(unstagedEntries);
+            var stagedTree = BuildTree(stagedEntries);
+
+            // 递归计算树中的文件总数
+            int CountFiles(TreeNode node)
+            {
+                if (!node.f) return 1;
+                return node.c?.Sum(c => CountFiles(c)) ?? 0;
+            }
+
+            var unstagedCount = unstagedTree.c?.Sum(c => CountFiles(c)) ?? 0;
+            var stagedCount = stagedTree.c?.Sum(c => CountFiles(c)) ?? 0;
+
             var notCommitted = status.Count();
             var ahead = repo.Head.TrackingDetails.AheadBy ?? 0;
-            return new { branch, remote, notCommitted, notPushed = ahead };
+
+            return new
+            {
+                branch,
+                remote,
+                notCommitted,
+                notPushed = ahead,
+                unstagedTree = unstagedTree.c,    // 树形结构（使用短字段名）
+                stagedTree = stagedTree.c,        // 树形结构（使用短字段名）
+                unstagedCount = unstagedCount,    // 文件数量
+                stagedCount = stagedCount         // 文件数量
+            };
+        }
+
+        public IEnumerable<object> GetBranches(string path)
+        {
+            using var repo = Open(path);
+            var currentBranch = repo.Head.FriendlyName;
+            var branches = repo.Branches.Where(b => !b.IsRemote).Select(b => new
+            {
+                name = b.FriendlyName,
+                current = b.FriendlyName == currentBranch,
+                isHead = b.IsCurrentRepositoryHead,
+                tip = b.Tip?.Sha[..7],
+                ahead = b.TrackingDetails.AheadBy ?? 0,
+                behind = b.TrackingDetails.BehindBy ?? 0
+            });
+            return branches.ToList();
+        }
+
+        public IEnumerable<object> GetRemotes(string path)
+        {
+            using var repo = Open(path);
+            var remotes = repo.Network.Remotes.Select(r => new
+            {
+                name = r.Name,
+                url = r.Url,
+                pushUrl = r.PushUrl
+            });
+            return remotes.ToList();
+        }
+
+        public IEnumerable<object> GetTags(string path)
+        {
+            using var repo = Open(path);
+            var tags = repo.Tags.Select(t => new
+            {
+                name = t.FriendlyName,
+                sha = t.Target?.Sha[..7],
+                message = (t.Target as Commit)?.MessageShort ?? ""
+            });
+            return tags.ToList();
         }
 
         public IEnumerable<object> GetCommits(string path, int page, int pageSize, string? author, string? q)
@@ -453,6 +623,44 @@ namespace GitWeb.Api.Services
             }
             repo.Network.Push(remote, repo.Head.CanonicalName, opts);
             return "OK";
+        }
+
+        public void Fetch(string path, string remoteName)
+        {
+            using var repo = Open(path);
+            var remote = repo.Network.Remotes[remoteName];
+            var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+            Commands.Fetch(repo, remote.Name, refSpecs, null, null);
+        }
+
+        public void StageFile(string path, string filePath)
+        {
+            using var repo = Open(path);
+            Commands.Stage(repo, filePath);
+        }
+
+        public void StageAll(string path, IEnumerable<string> filePaths)
+        {
+            using var repo = Open(path);
+            foreach (var filePath in filePaths)
+            {
+                Commands.Stage(repo, filePath);
+            }
+        }
+
+        public void UnstageFile(string path, string filePath)
+        {
+            using var repo = Open(path);
+            Commands.Unstage(repo, filePath);
+        }
+
+        public void UnstageAll(string path, IEnumerable<string> filePaths)
+        {
+            using var repo = Open(path);
+            foreach (var filePath in filePaths)
+            {
+                Commands.Unstage(repo, filePath);
+            }
         }
     }
 }

@@ -82,5 +82,29 @@ namespace GitWeb.Api.Controllers
 
             return Ok(details);
         }
+
+        [HttpGet("branches")]
+        public IActionResult GetBranches([FromQuery] string path)
+        {
+            if (!_git.IsValidRepoPath(path)) return BadRequest("Invalid repo path");
+            var branches = _git.GetBranches(path);
+            return Ok(branches);
+        }
+
+        [HttpGet("remotes")]
+        public IActionResult GetRemotes([FromQuery] string path)
+        {
+            if (!_git.IsValidRepoPath(path)) return BadRequest("Invalid repo path");
+            var remotes = _git.GetRemotes(path);
+            return Ok(remotes);
+        }
+
+        [HttpGet("tags")]
+        public IActionResult GetTags([FromQuery] string path)
+        {
+            if (!_git.IsValidRepoPath(path)) return BadRequest("Invalid repo path");
+            var tags = _git.GetTags(path);
+            return Ok(tags);
+        }
     }
 }

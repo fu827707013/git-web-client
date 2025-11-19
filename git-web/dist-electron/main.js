@@ -1,54 +1,81 @@
-import { app as r, BrowserWindow as a } from "electron";
-import { spawn as d } from "child_process";
-import t from "path";
-import { fileURLToPath as p } from "url";
-const m = p(import.meta.url), l = t.dirname(m);
-let n, e;
-function h() {
-  if (process.env.NODE_ENV === "development") {
+import { app, BrowserWindow } from "electron";
+import { spawn } from "child_process";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$1 = path.dirname(__filename$1);
+let mainWindow;
+let apiProcess;
+function startBackendAPI() {
+  const isDev = process.env.NODE_ENV === "development";
+  if (isDev) {
     console.log('开发模式：请手动启动后端 (dotnet run --urls "http://localhost:9002")');
     return;
   }
-  const i = t.join(process.resourcesPath, "server", "server.exe");
-  console.log("启动后端服务:", i), e = d(i, ["--urls", "http://localhost:9002"]), e.stdout.on("data", (o) => {
-    console.log(`[API] ${o}`);
-  }), e.stderr.on("data", (o) => {
-    console.error(`[API Error] ${o}`);
-  }), e.on("error", (o) => {
-    console.error("后端启动失败:", o);
-  }), e.on("exit", (o) => {
-    console.log(`后端进程退出，代码: ${o}`);
+  const serverPath = path.join(process.resourcesPath, "server", "server.exe");
+  console.log("启动后端服务:", serverPath);
+  apiProcess = spawn(serverPath, ["--urls", "http://localhost:9002"]);
+  apiProcess.stdout.on("data", (data) => {
+    console.log(`[API] ${data}`);
+  });
+  apiProcess.stderr.on("data", (data) => {
+    console.error(`[API Error] ${data}`);
+  });
+  apiProcess.on("error", (err) => {
+    console.error("后端启动失败:", err);
+  });
+  apiProcess.on("exit", (code) => {
+    console.log(`后端进程退出，代码: ${code}`);
   });
 }
-function c() {
-  n = new a({
+function createWindow() {
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      preload: t.join(l, "preload.js"),
-      contextIsolation: !0,
-      nodeIntegration: !1
+      preload: path.join(__dirname$1, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
     },
-    icon: t.join(l, "../resources/icon.ico")
-  }), process.env.NODE_ENV === "development" ? (n.loadURL("http://localhost:9001"), n.webContents.openDevTools()) : n.loadFile(t.join(l, "../dist/index.html")), n.on("closed", () => {
-    n = null;
+    icon: path.join(__dirname$1, "../resources/icon.ico")
+  });
+  const isDev = process.env.NODE_ENV === "development";
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:9001");
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname$1, "../dist/index.html"));
+  }
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 }
-r.whenReady().then(() => {
-  console.log("Electron 应用启动中..."), h(), setTimeout(() => {
-    console.log("创建主窗口..."), c();
-  }, 2e3), r.on("activate", () => {
-    a.getAllWindows().length === 0 && c();
+app.whenReady().then(() => {
+  console.log("Electron 应用启动中...");
+  startBackendAPI();
+  setTimeout(() => {
+    console.log("创建主窗口...");
+    createWindow();
+  }, 2e3);
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
-r.on("window-all-closed", () => {
-  process.platform !== "darwin" && r.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
-r.on("quit", () => {
-  e && (console.log("正在关闭后端进程..."), e.kill());
+app.on("quit", () => {
+  if (apiProcess) {
+    console.log("正在关闭后端进程...");
+    apiProcess.kill();
+  }
 });
-process.on("uncaughtException", (s) => {
-  console.error("未捕获的异常:", s);
+process.on("uncaughtException", (error) => {
+  console.error("未捕获的异常:", error);
 });

@@ -18,6 +18,9 @@ namespace GitWeb.Api.Controllers
         public record PushRequest(string path, string remoteName, string? username, string? password);
         public record DownloadCommitRequest(string path, string sha);
         public record DownloadCommitsRequest(string path, IEnumerable<string> shas);
+        public record StageFileRequest(string path, string filePath);
+        public record StageFilesRequest(string path, IEnumerable<string> filePaths);
+        public record FetchRequest(string path, string remoteName = "origin");
 
         [HttpPost("commit")]
         public IActionResult Commit([FromBody] CommitRequest req)
@@ -121,6 +124,88 @@ namespace GitWeb.Api.Controllers
             {
                 // 建议记录日志：_logger.LogError(ex, "下载多个提交ZIP失败");
                 return StatusCode(500, $"生成ZIP失败: {ex.Message}");
+            }
+        }
+
+        [HttpPost("stage")]
+        public IActionResult StageFile([FromBody] StageFileRequest req)
+        {
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
+            if (string.IsNullOrWhiteSpace(req.filePath)) return BadRequest("File path is required");
+
+            try
+            {
+                _git.StageFile(req.path, req.filePath);
+                return Ok(new { ok = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("stage-all")]
+        public IActionResult StageAll([FromBody] StageFilesRequest req)
+        {
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
+
+            try
+            {
+                _git.StageAll(req.path, req.filePaths);
+                return Ok(new { ok = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("unstage")]
+        public IActionResult UnstageFile([FromBody] StageFileRequest req)
+        {
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
+            if (string.IsNullOrWhiteSpace(req.filePath)) return BadRequest("File path is required");
+
+            try
+            {
+                _git.UnstageFile(req.path, req.filePath);
+                return Ok(new { ok = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("unstage-all")]
+        public IActionResult UnstageAll([FromBody] StageFilesRequest req)
+        {
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
+
+            try
+            {
+                _git.UnstageAll(req.path, req.filePaths);
+                return Ok(new { ok = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("fetch")]
+        public IActionResult Fetch([FromBody] FetchRequest req)
+        {
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
+
+            try
+            {
+                _git.Fetch(req.path, req.remoteName);
+                return Ok(new { ok = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
         }
     }

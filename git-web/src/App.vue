@@ -1,141 +1,141 @@
 <template>
-  <v-app>
-    <!-- App Bar -->
-    <v-app-bar color="primary" prominent>
-      <v-app-bar-title class="d-flex align-center">
-        <v-icon size="large" class="mr-3">mdi-git</v-icon>
-        <span class="text-h5 font-weight-bold">Git Web Client</span>
-      </v-app-bar-title>
+  <v-app :theme="uiStore.theme">
+    <!-- 顶部工具栏 -->
+    <Toolbar />
 
-      <template v-slot:append>
-        <v-chip v-if="path" color="white" variant="outlined" class="mr-2">
-          <v-icon start>mdi-folder-open</v-icon>
-          {{ getCurrentRepoDisplay() }}
-        </v-chip>
-        <v-btn icon @click="toggleTheme">
-          <v-icon>{{ theme === 'light' ? 'mdi-weather-night' : 'mdi-weather-sunny' }}</v-icon>
-        </v-btn>
-      </template>
-    </v-app-bar>
+    <!-- 仓库 Tab 标签栏 -->
+    <RepoTabs />
 
-    <!-- Navigation Drawer -->
-    <v-navigation-drawer v-model="drawer" app width="320">
-      <RepoLoader @loaded="onLoaded" />
-    </v-navigation-drawer>
+    <!-- 左侧导航 -->
+    <LeftNavigation />
 
-    <!-- Main Content -->
+    <!-- 主内容区 -->
     <v-main>
-      <v-container fluid class="pa-4">
-        <v-row v-if="!path">
-          <v-col cols="12">
-            <v-card class="text-center pa-8" elevation="0">
-              <v-icon size="100" color="grey-lighten-1">mdi-source-repository</v-icon>
-              <h2 class="text-h5 mt-4 mb-2">欢迎使用 Git Web Client</h2>
-              <p class="text-body-1 text-grey">
-                请从左侧面板选择或添加一个 Git 仓库开始使用
-              </p>
-              <v-btn
-                color="primary"
-                size="large"
-                class="mt-4"
-                @click="drawer = true"
-              >
-                <v-icon class="mr-2">mdi-plus</v-icon>
-                选择仓库
-              </v-btn>
-            </v-card>
-          </v-col>
-        </v-row>
+      <v-container fluid class="pa-0 main-content-container">
+        <!-- 欢迎屏幕（无仓库时显示） -->
+        <div v-if="reposStore.openRepos.length === 0" class="welcome-screen">
+          <v-card class="text-center pa-8" elevation="0">
+            <v-icon size="100" color="grey-lighten-1">mdi-source-repository</v-icon>
+            <h2 class="text-h5 mt-4 mb-2">欢迎使用 Git Web Client</h2>
+            <p class="text-body-1 text-grey">
+              请点击仓库标签栏的 + 按钮添加一个 Git 仓库开始使用
+            </p>
+          </v-card>
+        </div>
 
-        <template v-else>
-          <!-- Repository Status Section -->
-          <v-row>
-            <v-col cols="12">
-              <RepoStatusCard :path="path" />
-            </v-col>
-          </v-row>
+        <!-- 内容区（有仓库时显示） -->
+        <div v-else class="content-area">
+          <!-- All Commits 视图 -->
+          <AllCommitsView
+            v-if="uiStore.currentView === 'all-commits' && currentRepoPath"
+            :path="currentRepoPath"
+            @commit-selected="handleCommitSelected"
+          />
 
-          <!-- Git Actions Section (commented out for now) -->
-          <!-- <v-row>
-            <v-col cols="12">
-              <GitActions :path="path" />
-            </v-col>
-          </v-row> -->
-
-          <!-- Commit List Section -->
-          <v-row>
-            <v-col cols="12">
-              <CommitList :path="path" />
-            </v-col>
-          </v-row>
-        </template>
+          <!-- Changes 视图 -->
+          <ChangesView
+            v-else-if="uiStore.currentView === 'changes'"
+          />
+        </div>
       </v-container>
     </v-main>
 
-    <!-- Footer -->
-    <v-footer app class="text-center">
-      <v-col cols="12">
-        <span class="text-caption">
-          Git Web Client &copy; {{ new Date().getFullYear() }} -
-          Powered by Vue 3 + Vuetify 3
-        </span>
-      </v-col>
-    </v-footer>
+    <!-- 底部详情面板 -->
+    <BottomDetailPanel />
   </v-app>
 </template>
 
 <script setup>
-import RepoLoader from './components/RepoLoader.vue'
-import RepoStatusCard from './components/RepoStatusCard.vue'
-import CommitList from './components/CommitList.vue'
-import GitActions from './components/GitActions.vue'
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useTheme } from 'vuetify'
+import { useUiStore } from './stores/ui'
+import { useReposStore } from './stores/repos'
+import { useGitStore } from './stores/git'
 
-const path = ref(localStorage.getItem('repoPath') || '')
-const drawer = ref(true)
-const theme = ref('light')
+import Toolbar from './components/Toolbar.vue'
+import RepoTabs from './components/RepoTabs.vue'
+import LeftNavigation from './components/LeftNavigation.vue'
+import AllCommitsView from './components/AllCommitsView.vue'
+import ChangesView from './components/ChangesView.vue'
+import BottomDetailPanel from './components/BottomDetailPanel.vue'
+
+const uiStore = useUiStore()
+const reposStore = useReposStore()
+const gitStore = useGitStore()
 const vuetifyTheme = useTheme()
 
-onMounted(() => {
-  const savedTheme = localStorage.getItem('theme') || 'light'
-  theme.value = savedTheme
-  vuetifyTheme.global.name.value = savedTheme
+// 计算当前仓库路径
+const currentRepoPath = computed(() => {
+  return reposStore.activeRepo?.path || ''
 })
 
-function onLoaded(p) {
-  path.value = p
-  localStorage.setItem('repoPath', p)
-}
+// 计算底部内边距（底部面板显示时需要）
+const bottomPadding = computed(() => {
+  return uiStore.bottomPanelVisible ? `${uiStore.bottomPanelHeight + 48}px` : '0'
+})
 
-function toggleTheme() {
-  theme.value = theme.value === 'light' ? 'dark' : 'light'
-  vuetifyTheme.global.name.value = theme.value
-  localStorage.setItem('theme', theme.value)
-}
+// 初始化主题和加载已保存的仓库
+onMounted(async () => {
+  uiStore.initTheme()
+  vuetifyTheme.global.name.value = uiStore.theme
 
-function getCurrentRepoDisplay() {
-  const repoName = localStorage.getItem('currentRepoName')
-  if (repoName) {
-    return repoName
-  }
-  // 如果没有仓库名称，显示路径的最后一部分
-  const parts = path.value.split(/[/\\]/)
-  return parts[parts.length - 1] || path.value
+  // 从后台加载已保存的仓库
+  await reposStore.loadSavedRepos()
+})
+
+// 监听主题变化
+watch(() => uiStore.theme, (newTheme) => {
+  vuetifyTheme.global.name.value = newTheme
+})
+
+// 监听当前仓库变化
+watch(() => reposStore.activeRepo, (repo) => {
+  // 当前激活仓库变化时的逻辑（如果需要的话）
+})
+
+// 处理提交选中事件
+function handleCommitSelected(commit) {
+  gitStore.selectCommit(commit)
 }
 </script>
 
 <style>
 /* 全局样式优化 */
-.v-app-bar-title {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
 }
 
 .v-main {
+  /* Vuetify会自动计算高度，减去app-bar的高度 */
+}
+
+.main-content-container {
+  height: 100%;
+  padding-bottom: v-bind(bottomPadding);
+}
+
+.welcome-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   background-color: #f5f5f5;
 }
 
-.v-theme--dark .v-main {
+.content-area {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 深色主题背景 */
+.v-theme--dark .welcome-screen {
   background-color: #121212;
 }
 </style>

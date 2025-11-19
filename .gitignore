@@ -11,3 +11,8 @@
 /winui3/src/GitDesktop/bin/x64/Debug/net8.0-windows10.0.19041.0
 /git-web/release
 /git-web/dist
+git-web/src_bak/
+
+# Auto-generated type declarations
+/git-web/auto-imports.d.ts
+/git-web/components.d.ts
