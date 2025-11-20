@@ -1,8 +1,8 @@
 <template>
   <v-container fluid class="pa-0 changes-view-container">
-    <v-row no-gutters style="height: 100%">
+    <v-row no-gutters class="fill-height">
       <!-- 左侧：文件列表区 (35%) -->
-      <v-col cols="4" class="file-list-area">
+      <v-col cols="4" class="file-list-area" style="height: 100%; max-height: 100%;">
 
         <!-- 提交信息区 -->
         <v-card flat>
@@ -505,12 +505,19 @@ function discardAll() {
 <style scoped>
 .changes-view-container {
   height: 100%;
+  overflow: hidden;
+}
+
+.changes-view-container :deep(.v-row) {
+  height: 100%;
 }
 
 .file-list-area {
   border-right: 1px solid rgba(0, 0, 0, 0.12);
-  overflow-y: auto;
   height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-bottom: 16px;
 }
 
 .diff-viewer-area {
@@ -519,7 +526,9 @@ function discardAll() {
 
 .unstaged-files-container,
 .staged-files-container {
-  max-height: 600px;
+  flex: 1;
+  min-height: 0;
+  max-height: 35vh;
   overflow-y: auto;
 }
 

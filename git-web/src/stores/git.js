@@ -366,6 +366,33 @@ export const useGitStore = defineStore('git', () => {
     }
   }
 
+  // Commit（提交）
+  async function commit(repoPath, message, authorName = 'User', authorEmail = 'user@example.com') {
+    if (!repoPath) throw new Error('Repository path is required')
+    if (!message) throw new Error('Commit message is required')
+    if (stagedCount.value === 0) throw new Error('No files to commit')
+
+    try {
+      const files = collectFilePathsFromTree(stagedTree.value)
+      const res = await api.post('/git/commit', {
+        path: repoPath,
+        files,
+        message,
+        authorName,
+        authorEmail
+      })
+
+      // 提交成功后清空 staged
+      stagedTree.value = []
+      stagedCount.value = 0
+
+      return res.data.sha
+    } catch (e) {
+      console.error('Failed to commit:', e)
+      throw e
+    }
+  }
+
   return {
     branches,
     currentBranch,
@@ -392,6 +419,7 @@ export const useGitStore = defineStore('git', () => {
     loadFileStatus,
     pull,
     push,
-    fetch
+    fetch,
+    commit
   }
 })
