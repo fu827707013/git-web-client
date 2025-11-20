@@ -1,82 +1,103 @@
-import { app as o, BrowserWindow as u, dialog as c, Menu as d, shell as h } from "electron";
-import { spawn as w } from "child_process";
-import s from "path";
-import { fileURLToPath as $ } from "url";
-import f from "fs";
-const v = $(import.meta.url), m = s.dirname(v);
-let i, a;
-const r = s.join(o.getPath("userData"), "app.log");
-function l(t) {
-  const e = `[${(/* @__PURE__ */ new Date()).toISOString()}] ${t}
+import { app, BrowserWindow, dialog, Menu, shell } from "electron";
+import { spawn } from "child_process";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+const __filename$1 = fileURLToPath(import.meta.url);
+const __dirname$1 = path.dirname(__filename$1);
+let mainWindow;
+let apiProcess;
+const logFilePath = path.join(app.getPath("userData"), "app.log");
+function log(message) {
+  const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+  const logMessage = `[${timestamp}] ${message}
 `;
-  console.log(t);
+  console.log(message);
   try {
-    f.appendFileSync(r, e);
-  } catch (p) {
-    console.error("写入日志失败:", p);
+    fs.appendFileSync(logFilePath, logMessage);
+  } catch (err) {
+    console.error("写入日志失败:", err);
   }
 }
-function P() {
-  if (process.env.NODE_ENV === "development")
+function startBackendAPI() {
+  const isDev = process.env.NODE_ENV === "development";
+  if (isDev) {
     return;
-  const n = s.join(process.resourcesPath, "server", "GitWeb.Api.exe");
-  if (!f.existsSync(n)) {
-    l(`[错误] 后端文件不存在: ${n}`), c.showErrorBox("启动错误", `后端服务器文件不存在:
-${n}
+  }
+  const serverPath = path.join(process.resourcesPath, "server", "GitWeb.Api.exe");
+  if (!fs.existsSync(serverPath)) {
+    log(`[错误] 后端文件不存在: ${serverPath}`);
+    dialog.showErrorBox("启动错误", `后端服务器文件不存在:
+${serverPath}
 
 日志文件位置:
-${r}`);
+${logFilePath}`);
     return;
   }
   try {
-    a = w(n, ["--urls", "http://localhost:9002"], {
-      cwd: s.dirname(n),
+    apiProcess = spawn(serverPath, ["--urls", "http://localhost:9002"], {
+      cwd: path.dirname(serverPath),
       env: { ...process.env }
-    }), a.on("error", (e) => {
-      l(`[错误] 后端启动失败: ${e.message}`), c.showErrorBox("后端启动失败", `${e.message}
+    });
+    apiProcess.on("error", (err) => {
+      log(`[错误] 后端启动失败: ${err.message}`);
+      dialog.showErrorBox("后端启动失败", `${err.message}
 
 日志文件位置:
-${r}`);
-    }), a.on("exit", (e) => {
-      e !== 0 && e !== null && l(`[错误] 后端进程异常退出，代码: ${e}`);
-    }), l("后端服务已启动");
-  } catch (e) {
-    l(`[错误] 启动后端时发生异常: ${e.message}`), c.showErrorBox("启动错误", `${e.message}
+${logFilePath}`);
+    });
+    apiProcess.on("exit", (code) => {
+      if (code !== 0 && code !== null) {
+        log(`[错误] 后端进程异常退出，代码: ${code}`);
+      }
+    });
+    log(`后端服务已启动`);
+  } catch (err) {
+    log(`[错误] 启动后端时发生异常: ${err.message}`);
+    dialog.showErrorBox("启动错误", `${err.message}
 
 日志文件位置:
-${r}`);
+${logFilePath}`);
   }
 }
-function g() {
-  const t = process.env.NODE_ENV === "development", n = t ? s.join(m, "preload.js") : s.join(o.getAppPath(), "dist-electron", "preload.js");
-  i = new u({
+function createWindow() {
+  const isDev = process.env.NODE_ENV === "development";
+  const preloadPath = isDev ? path.join(__dirname$1, "preload.js") : path.join(app.getAppPath(), "dist-electron", "preload.js");
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      preload: n,
-      contextIsolation: !0,
-      nodeIntegration: !1
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false
     },
-    icon: s.join(m, "../resources/icon.ico")
-  }), t ? (i.loadURL("http://localhost:9001"), i.webContents.openDevTools()) : i.loadFile(s.join(m, "../dist/index.html")), i.on("closed", () => {
-    i = null;
+    icon: path.join(__dirname$1, "../resources/icon.ico")
   });
-  const e = [
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:9001");
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname$1, "../dist/index.html"));
+  }
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+  const template = [
     {
       label: "帮助",
       submenu: [
         {
           label: "打开日志文件",
           click: () => {
-            h.openPath(r);
+            shell.openPath(logFilePath);
           }
         },
         {
           label: "打开日志文件夹",
           click: () => {
-            h.showItemInFolder(r);
+            shell.showItemInFolder(logFilePath);
           }
         },
         {
@@ -85,33 +106,44 @@ function g() {
         {
           label: "关于",
           click: () => {
-            c.showMessageBox(i, {
+            dialog.showMessageBox(mainWindow, {
               type: "info",
               title: "关于",
               message: "Git Web Client",
-              detail: `版本: ${o.getVersion()}
-日志: ${r}`
+              detail: `版本: ${app.getVersion()}
+日志: ${logFilePath}`
             });
           }
         }
       ]
     }
-  ], p = d.buildFromTemplate(e);
-  d.setApplicationMenu(p);
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
-o.whenReady().then(() => {
-  l(`应用启动 - 版本: ${o.getVersion()}`), P(), setTimeout(() => {
-    g();
-  }, 2e3), o.on("activate", () => {
-    u.getAllWindows().length === 0 && g();
+app.whenReady().then(() => {
+  log(`应用启动 - 版本: ${app.getVersion()}`);
+  startBackendAPI();
+  setTimeout(() => {
+    createWindow();
+  }, 2e3);
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
-o.on("window-all-closed", () => {
-  process.platform !== "darwin" && o.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
-o.on("quit", () => {
-  a && (console.log("正在关闭后端进程..."), a.kill());
+app.on("quit", () => {
+  if (apiProcess) {
+    console.log("正在关闭后端进程...");
+    apiProcess.kill();
+  }
 });
-process.on("uncaughtException", (t) => {
-  console.error("未捕获的异常:", t);
+process.on("uncaughtException", (error) => {
+  console.error("未捕获的异常:", error);
 });

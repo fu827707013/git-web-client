@@ -10,11 +10,11 @@
             <v-textarea v-model="commitMessage" variant="outlined" placeholder="输入提交消息..." rows="3" density="compact"
               hide-details />
             <div class="d-flex gap-2 mt-3">
-              <v-btn color="primary" size="small" :disabled="gitStore.stagedCount === 0 || !commitMessage"
+              <v-btn color="primary" :disabled="gitStore.stagedCount === 0 || !commitMessage"
                 @click="commit">
                 提交
               </v-btn>
-              <v-btn size="small" variant="outlined" @click="discardAll">
+              <v-btn variant="outlined" @click="discardAll">
                 放弃所有变更
               </v-btn>
             </div>
@@ -26,12 +26,12 @@
           <v-card-title class="d-flex align-center py-2 px-3 bg-grey-lighten-4">
             <span class="text-subtitle-2">Unstaged ({{ gitStore.unstagedCount }})</span>
             <v-spacer />
-            <v-btn size="x-small" variant="text" @click="stageAll" :disabled="gitStore.unstagedCount === 0">
+            <v-btn variant="text" @click="stageAll" :disabled="gitStore.unstagedCount === 0">
               Stage All
             </v-btn>
-            <v-btn size="x-small" variant="text" icon @click="toggleExpandUnstaged"
+            <v-btn variant="text" icon @click="toggleExpandUnstaged"
               :disabled="gitStore.unstagedCount === 0" class="mr-1">
-              <v-icon size="small">{{ isUnstagedExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              <v-icon >{{ isUnstagedExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
             </v-btn>
           </v-card-title>
           <v-card-text class="pa-0 unstaged-files-container">
@@ -47,16 +47,16 @@
               <template v-slot="{ node, stat, tree }">
                 <div class="tree-node-item" :style="{ paddingLeft: stat.level * 20 + 'px' }">
                   <!-- 文件夹折叠图标 -->
-                  <v-icon v-if="node.f" size="small" class="tree-icon fold-icon" @click.stop="toggleNode(stat)">
+                  <v-icon v-if="node.f" class="tree-icon fold-icon" @click.stop="toggleNode(stat)">
                     {{ stat.open ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
                   </v-icon>
                   <span v-else class="tree-icon-placeholder"></span>
 
                   <!-- 文件夹图标 -->
-                  <v-icon v-if="node.f" size="small" class="tree-icon">mdi-folder</v-icon>
+                  <v-icon v-if="node.f" class="tree-icon">mdi-folder</v-icon>
 
                   <!-- 文件暂存图标 -->
-                  <v-icon v-if="!node.f" size="small" color="success" class="tree-icon action-icon"
+                  <v-icon v-if="!node.f" color="success" class="tree-icon action-icon"
                     @click.stop="stageFile(node, stat)">
                     mdi-plus-circle-outline
                   </v-icon>
@@ -65,7 +65,7 @@
                   <span class="text-caption node-name">{{ node.n }}</span>
 
                   <!-- 文件状态标记 -->
-                  <v-chip v-if="!node.f && node.s" size="x-small" class="ml-2" :color="getStatusColor(node.s)">
+                  <v-chip v-if="!node.f && node.s" class="ml-2" :color="getStatusColor(node.s)">
                     {{ node.s }}
                   </v-chip>
 
@@ -87,12 +87,12 @@
           <v-card-title class="d-flex align-center py-2 px-3 bg-grey-lighten-4">
             <span class="text-subtitle-2">Staged ({{ gitStore.stagedCount }})</span>
             <v-spacer />
-            <v-btn size="x-small" variant="text" @click="unstageAll" :disabled="gitStore.stagedCount === 0">
+            <v-btn variant="text" @click="unstageAll" :disabled="gitStore.stagedCount === 0">
               Unstage All
             </v-btn>
-            <v-btn size="x-small" variant="text" icon @click="toggleExpandStaged" :disabled="gitStore.stagedCount === 0"
+            <v-btn variant="text" icon @click="toggleExpandStaged" :disabled="gitStore.stagedCount === 0"
               class="mr-1">
-              <v-icon size="small">{{ isStagedExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              <v-icon >{{ isStagedExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
             </v-btn>
           </v-card-title>
           <v-card-text class="pa-0 staged-files-container">
@@ -103,16 +103,16 @@
               <template v-slot="{ node, stat, tree }">
                 <div class="tree-node-item" :style="{ paddingLeft: stat.level * 20 + 'px' }">
                   <!-- 文件夹折叠图标 -->
-                  <v-icon v-if="node.f" size="small" class="tree-icon fold-icon" @click.stop="toggleNode(stat)">
+                  <v-icon v-if="node.f" class="tree-icon fold-icon" @click.stop="toggleNode(stat)">
                     {{ stat.open ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
                   </v-icon>
                   <span v-else class="tree-icon-placeholder"></span>
 
                   <!-- 文件夹图标 -->
-                  <v-icon v-if="node.f" size="small" class="tree-icon">mdi-folder</v-icon>
+                  <v-icon v-if="node.f" class="tree-icon">mdi-folder</v-icon>
 
                   <!-- 文件取消暂存图标 -->
-                  <v-icon v-if="!node.f" size="small" color="warning" class="tree-icon action-icon"
+                  <v-icon v-if="!node.f" color="warning" class="tree-icon action-icon"
                     @click.stop="unstageFile(node, stat)">
                     mdi-minus-circle-outline
                   </v-icon>
@@ -121,7 +121,7 @@
                   <span class="text-caption node-name">{{ node.n }}</span>
 
                   <!-- 文件状态标记 -->
-                  <v-chip v-if="!node.f && node.s" size="x-small" class="ml-2" :color="getStatusColor(node.s)">
+                  <v-chip v-if="!node.f && node.s" class="ml-2" :color="getStatusColor(node.s)">
                     {{ node.s }}
                   </v-chip>
 
