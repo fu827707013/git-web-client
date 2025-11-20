@@ -46,7 +46,7 @@ export default defineConfig({
                         outDir: 'dist-electron',
                         rollupOptions: {
                             output: {
-                                format: 'es'
+                                format: 'cjs'  // preload 必须使用 CommonJS 格式
                             }
                         }
                     }
