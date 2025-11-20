@@ -438,7 +438,7 @@ async function stageAll() {
   try {
     await gitStore.stageAll(repoPath)
   } catch (e) {
-    alert('暂存所有文件失败: ' + e.message)
+    alert('暂存所有文件失败: ' + (e.response?.data?.error || e.message))
   }
 }
 
@@ -452,7 +452,7 @@ async function unstageAll() {
   try {
     await gitStore.unstageAll(repoPath)
   } catch (e) {
-    alert('取消暂存所有文件失败: ' + e.message)
+    alert('取消暂存所有文件失败: ' + (e.response?.data?.error || e.message))
   }
 }
 
@@ -484,11 +484,14 @@ async function commit() {
     // 清空本地 staged 树
     localStagedTree.value = []
 
+    // 重新加载仓库信息以更新未推送数量
+    await gitStore.loadRepoInfo(repoPath)
+
     alert(`提交成功！\nSHA: ${sha}`)
     commitMessage.value = ''
   } catch (e) {
     console.error('Failed to commit:', e)
-    alert('提交失败: ' + (e.message || e))
+    alert('提交失败: ' + (e.response?.data?.error || e.message || e))
   }
 }
 

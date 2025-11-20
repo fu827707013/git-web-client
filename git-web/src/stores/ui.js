@@ -16,6 +16,12 @@ export const useUiStore = defineStore('ui', () => {
   // 主题
   const theme = ref('light')
 
+  // 组件大小: 'x-small' | 'small' | 'default' | 'large' | 'x-large'
+  const componentSize = ref('small')
+
+  // 组件密度: 'compact' | 'comfortable' | 'default'
+  const componentDensity = ref('compact')
+
   // 切换视图
   function switchView(viewName) {
     currentView.value = viewName
@@ -49,6 +55,33 @@ export const useUiStore = defineStore('ui', () => {
     theme.value = savedTheme
   }
 
+  // 设置组件大小
+  function setComponentSize(size) {
+    componentSize.value = size
+    localStorage.setItem('componentSize', size)
+    // 刷新页面以应用新设置
+    window.location.reload()
+  }
+
+  // 设置组件密度
+  function setComponentDensity(density) {
+    componentDensity.value = density
+    localStorage.setItem('componentDensity', density)
+    // 刷新页面以应用新设置
+    window.location.reload()
+  }
+
+  // 初始化 UI 设置
+  function initUiSettings() {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    const savedSize = localStorage.getItem('componentSize') || 'small'
+    const savedDensity = localStorage.getItem('componentDensity') || 'compact'
+
+    theme.value = savedTheme
+    componentSize.value = savedSize
+    componentDensity.value = savedDensity
+  }
+
   return {
     currentView,
     leftPanelWidth,
@@ -56,11 +89,16 @@ export const useUiStore = defineStore('ui', () => {
     bottomPanelHeight,
     bottomPanelActiveTab,
     theme,
+    componentSize,
+    componentDensity,
     switchView,
     showBottomPanel,
     hideBottomPanel,
     switchBottomPanelTab,
     toggleTheme,
-    initTheme
+    initTheme,
+    setComponentSize,
+    setComponentDensity,
+    initUiSettings
   }
 })

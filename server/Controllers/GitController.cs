@@ -25,25 +25,49 @@ namespace GitWeb.Api.Controllers
         [HttpPost("commit")]
         public IActionResult Commit([FromBody] CommitRequest req)
         {
-            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
-            var sha = _git.Commit(req.path, req.files, req.message, req.authorName, req.authorEmail);
-            return Ok(new { sha });
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest(new { error = "Invalid repo path" });
+
+            try
+            {
+                var sha = _git.Commit(req.path, req.files, req.message, req.authorName, req.authorEmail);
+                return Ok(new { sha });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPost("pull")]
         public IActionResult Pull([FromBody] PullRequest req)
         {
-            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
-            var status = _git.Pull(req.path, req.name, req.email, req.rebase);
-            return Ok(new { status });
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest(new { error = "Invalid repo path" });
+
+            try
+            {
+                var status = _git.Pull(req.path, req.name, req.email, req.rebase);
+                return Ok(new { status });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPost("push")]
         public IActionResult Push([FromBody] PushRequest req)
         {
-            if (!_git.IsValidRepoPath(req.path)) return BadRequest("Invalid repo path");
-            var result = _git.Push(req.path, req.remoteName, req.username, req.password);
-            return Ok(new { result });
+            if (!_git.IsValidRepoPath(req.path)) return BadRequest(new { error = "Invalid repo path" });
+
+            try
+            {
+                var result = _git.Push(req.path, req.remoteName, req.username, req.password);
+                return Ok(new { result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         //[HttpPost("download-commit")]

@@ -27,6 +27,9 @@ export const useGitStore = defineStore('git', () => {
   const unstagedCount = ref(0)
   const stagedCount = ref(0)
 
+  // 未推送的提交数量
+  const unpushedCount = ref(0)
+
   // 设置分支列表
   function setBranches(branchList) {
     branches.value = branchList
@@ -254,6 +257,16 @@ export const useGitStore = defineStore('git', () => {
       remotes.value = remotesRes.data || []
       tags.value = tagsRes.data || []
 
+      // 找到当前分支并更新未推送数量
+      const currentBranchData = branches.value.find(b => b.current)
+      if (currentBranchData) {
+        currentBranch.value = currentBranchData.name
+        unpushedCount.value = currentBranchData.ahead || 0
+      } else {
+        currentBranch.value = null
+        unpushedCount.value = 0
+      }
+
       // 异步加载变更文件列表（不阻塞界面）
       loadFileStatus(repoPath)
     } catch (e) {
@@ -404,6 +417,7 @@ export const useGitStore = defineStore('git', () => {
     stagedTree,
     unstagedCount,
     stagedCount,
+    unpushedCount,
     setBranches,
     setCurrentBranch,
     setRemotes,

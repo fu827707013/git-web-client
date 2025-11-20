@@ -1,14 +1,40 @@
 <template>
   <v-card>
-    <v-card-title>提交历史</v-card-title>
+    <!-- <v-card-title>提交历史</v-card-title> -->
     <v-card-text>
-      <v-row class="mb-2">
-        <v-col cols="12" sm="6"><v-text-field v-model="q" label="搜索提交消息" /></v-col>
-        <v-col cols="12" sm="6"><v-text-field v-model="author" label="作者筛选" /></v-col>
+      <v-row>
+        <v-col cols="12" sm="6">
+          <v-text-field v-model="q" label="搜索提交消息" density="compact" hide-details />
+        </v-col>
+        <v-col cols="12" sm="6">
+          <v-text-field v-model="author" label="作者筛选" density="compact" hide-details />
+        </v-col>
       </v-row>
-      <v-btn color="primary" class="mb-2" @click="refresh">查询</v-btn>
-      <v-btn color="secondary" class="mb-2 ml-2" :disabled="!hasSelected" @click="downloadSelected">批量下载所选</v-btn>
-      <v-btn color="error" class="mb-2 ml-2" :disabled="!hasSelected" @click="clearSelection">清空选中</v-btn>
+
+      <div class="d-flex flex-wrap gap-2 my-3">
+        <v-btn color="primary" @click="refresh">查询</v-btn>
+        <v-btn color="secondary" :disabled="!hasSelected" @click="downloadSelected">批量下载所选</v-btn>
+        <v-btn color="error" :disabled="!hasSelected" @click="clearSelection">清空选中</v-btn>
+
+        <v-spacer />
+
+        <v-menu>
+          <template v-slot:activator="{ props }">
+            <v-btn color="info" v-bind="props">
+              条件批量下载
+              <v-icon end>mdi-menu-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-item @click="showDateRangeDialog">
+              <v-list-item-title>按日期范围下载</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="showShaRangeDialog">
+              <v-list-item-title>按SHA范围下载</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
 
       <!-- 提交记录列表 -->
       <v-data-table
@@ -37,13 +63,21 @@
             <td>{{ item.author }}</td>
             <td>{{ formatDate(item.date) }}</td>
             <td>
-              <v-btn
-                size="small"
-                color="primary"
-                @click.stop="downloadCommit(item.sha)"
-              >
-                下载
-              </v-btn>
+              <div class="d-flex gap-1">
+                <v-btn
+                  color="primary"
+                  @click.stop="downloadCommit(item.sha)"
+                >
+                  下载
+                </v-btn>
+                <v-btn
+                  variant="outlined"
+                  @click.stop="copySha(item.sha)"
+                  title="复制SHA"
+                >
+                  <v-icon>mdi-content-copy</v-icon>
+                </v-btn>
+              </div>
             </td>
           </tr>
         </template>
@@ -97,6 +131,74 @@
         :path="path"
         :sha="detailDialog.sha"
       />
+
+      <!-- Date Range Download Dialog -->
+      <v-dialog v-model="dateRangeDialog.show" max-width="500px">
+        <v-card>
+          <v-card-title>按日期范围下载</v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="dateRangeDialog.startDate"
+                  label="开始日期"
+                  type="datetime-local"
+                  density="compact"
+                  hide-details
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="dateRangeDialog.endDate"
+                  label="结束日期"
+                  type="datetime-local"
+                  density="compact"
+                  hide-details
+                />
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn @click="dateRangeDialog.show = false">取消</v-btn>
+            <v-btn color="primary" @click="downloadByDateRange" :loading="dateRangeDialog.loading">下载</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- SHA Range Download Dialog -->
+      <v-dialog v-model="shaRangeDialog.show" max-width="500px">
+        <v-card>
+          <v-card-title>按SHA范围下载</v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="shaRangeDialog.startSha"
+                  label="开始SHA（包含）"
+                  density="compact"
+                  hide-details
+                  placeholder="输入完整SHA或前7位"
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="shaRangeDialog.endSha"
+                  label="结束SHA（包含）"
+                  density="compact"
+                  hide-details
+                  placeholder="输入完整SHA或前7位"
+                />
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn @click="shaRangeDialog.show = false">取消</v-btn>
+            <v-btn color="primary" @click="downloadByShaRange" :loading="shaRangeDialog.loading">下载</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-card-text>
   </v-card>
 </template>
@@ -129,6 +231,20 @@ const detailDialog = ref({
   sha: null
 })
 
+const dateRangeDialog = ref({
+  show: false,
+  startDate: '',
+  endDate: '',
+  loading: false
+})
+
+const shaRangeDialog = ref({
+  show: false,
+  startSha: '',
+  endSha: '',
+  loading: false
+})
+
 // 点击外部关闭菜单
 function handleClickOutside(event) {
   if (contextMenu.value.show && contextMenuRef.value && !contextMenuRef.value.contains(event.target)) {
@@ -150,7 +266,7 @@ const headers = [
   { title: '提交消息', key: 'message', sortable: false },
   { title: '作者', key: 'author', sortable: false, width: '150px' },
   { title: '日期', key: 'date', sortable: false, width: '180px' },
-  { title: '操作', key: 'actions', sortable: false, width: '100px' }
+  { title: '操作', key: 'actions', sortable: false, width: '140px' }
 ]
 function formatDate(d) {
   const dt = new Date(d)
@@ -243,13 +359,20 @@ function showCommitDetails() {
 function copyCommitSha() {
   if (contextMenu.value.item) {
     const sha = contextMenu.value.item.sha
-    navigator.clipboard.writeText(sha).then(() => {
-      console.log('SHA copied to clipboard:', sha)
-    }).catch(err => {
-      console.error('Failed to copy SHA:', err)
-    })
+    copySha(sha)
   }
   contextMenu.value.show = false
+}
+
+function copySha(sha) {
+  navigator.clipboard.writeText(sha).then(() => {
+    console.log('SHA copied to clipboard:', sha)
+    // 可以添加一个提示
+    alert('SHA已复制到剪贴板: ' + sha.substring(0, 7))
+  }).catch(err => {
+    console.error('Failed to copy SHA:', err)
+    alert('复制失败，请重试')
+  })
 }
 
 function saveBlob(blob, name) {
@@ -262,6 +385,123 @@ function saveBlob(blob, name) {
   a.remove()
   URL.revokeObjectURL(url)
 }
+
+function showDateRangeDialog() {
+  // 设置默认日期为最近7天
+  const now = new Date()
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  dateRangeDialog.value.endDate = formatDateTimeLocal(now)
+  dateRangeDialog.value.startDate = formatDateTimeLocal(weekAgo)
+  dateRangeDialog.value.show = true
+}
+
+function showShaRangeDialog() {
+  shaRangeDialog.value.startSha = ''
+  shaRangeDialog.value.endSha = ''
+  shaRangeDialog.value.show = true
+}
+
+function formatDateTimeLocal(date) {
+  const pad = (num) => String(num).padStart(2, '0')
+  const year = date.getFullYear()
+  const month = pad(date.getMonth() + 1)
+  const day = pad(date.getDate())
+  const hours = pad(date.getHours())
+  const minutes = pad(date.getMinutes())
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+async function downloadByDateRange() {
+  if (!dateRangeDialog.value.startDate || !dateRangeDialog.value.endDate) {
+    alert('请选择开始日期和结束日期')
+    return
+  }
+
+  const startDate = new Date(dateRangeDialog.value.startDate)
+  const endDate = new Date(dateRangeDialog.value.endDate)
+
+  if (startDate > endDate) {
+    alert('开始日期不能晚于结束日期')
+    return
+  }
+
+  // 筛选符合日期范围的提交
+  const filtered = items.value.filter(item => {
+    const commitDate = new Date(item.date)
+    return commitDate >= startDate && commitDate <= endDate
+  })
+
+  if (filtered.length === 0) {
+    alert('在此日期范围内没有找到提交记录')
+    return
+  }
+
+  // 按日期排序
+  const sorted = filtered.sort((a, b) => new Date(a.date) - new Date(b.date))
+  const shas = sorted.map(x => x.sha)
+
+  dateRangeDialog.value.loading = true
+  try {
+    const res = await api.post('/git/download-commits', { path: props.path, shas }, { responseType: 'blob' })
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    saveBlob(res.data, `commits_${timestamp}.zip`)
+    dateRangeDialog.value.show = false
+  } catch (e) {
+    alert('下载失败: ' + (e.response?.data?.error || e.message))
+  } finally {
+    dateRangeDialog.value.loading = false
+  }
+}
+
+async function downloadByShaRange() {
+  if (!shaRangeDialog.value.startSha || !shaRangeDialog.value.endSha) {
+    alert('请输入开始SHA和结束SHA')
+    return
+  }
+
+  const startSha = shaRangeDialog.value.startSha.trim()
+  const endSha = shaRangeDialog.value.endSha.trim()
+
+  // 在当前列表中查找匹配的SHA
+  const startIndex = items.value.findIndex(item =>
+    item.sha.startsWith(startSha) || item.sha === startSha
+  )
+  const endIndex = items.value.findIndex(item =>
+    item.sha.startsWith(endSha) || item.sha === endSha
+  )
+
+  if (startIndex === -1) {
+    alert('未找到开始SHA: ' + startSha)
+    return
+  }
+  if (endIndex === -1) {
+    alert('未找到结束SHA: ' + endSha)
+    return
+  }
+
+  // 获取范围内的所有提交（包含开始和结束）
+  const start = Math.min(startIndex, endIndex)
+  const end = Math.max(startIndex, endIndex)
+  const rangeItems = items.value.slice(start, end + 1)
+
+  // 按日期排序
+  const sorted = rangeItems.sort((a, b) => new Date(a.date) - new Date(b.date))
+  const shas = sorted.map(x => x.sha)
+
+  shaRangeDialog.value.loading = true
+  try {
+    const res = await api.post('/git/download-commits', { path: props.path, shas }, { responseType: 'blob' })
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    saveBlob(res.data, `commits_${timestamp}.zip`)
+    shaRangeDialog.value.show = false
+  } catch (e) {
+    alert('下载失败: ' + (e.response?.data?.error || e.message))
+  } finally {
+    shaRangeDialog.value.loading = false
+  }
+}
+
 watch(() => props.path, () => { page.value = 1; fetch() }, { immediate: true })
 </script>
 

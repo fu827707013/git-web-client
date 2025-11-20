@@ -76,7 +76,8 @@ const bottomPadding = computed(() => {
 
 // 初始化主题和加载已保存的仓库
 onMounted(async () => {
-  uiStore.initTheme()
+  // 初始化所有 UI 设置（包括主题、size、density）
+  uiStore.initUiSettings()
   vuetifyTheme.global.name.value = uiStore.theme
 
   // 从后台加载已保存的仓库

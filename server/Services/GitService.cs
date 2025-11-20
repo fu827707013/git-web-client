@@ -1,9 +1,55 @@
 ﻿using LibGit2Sharp;
+using System.Diagnostics;
 using System.IO.Compression;
 namespace GitWeb.Api.Services
 {
     public class GitService
     {
+        // 从系统 git credential helper 获取凭据
+        private (string? username, string? password) GetCredentialsFromGit(string url)
+        {
+            try
+            {
+                var uri = new Uri(url);
+                var input = $"protocol={uri.Scheme}\nhost={uri.Host}\n\n";
+
+                var psi = new ProcessStartInfo("git", "credential fill")
+                {
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process == null) return (null, null);
+
+                process.StandardInput.Write(input);
+                process.StandardInput.Close();
+
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0) return (null, null);
+
+                string? username = null, password = null;
+                foreach (var line in output.Split('\n'))
+                {
+                    if (line.StartsWith("username="))
+                        username = line.Substring(9).Trim();
+                    else if (line.StartsWith("password="))
+                        password = line.Substring(9).Trim();
+                }
+
+                return (username, password);
+            }
+            catch
+            {
+                return (null, null);
+            }
+        }
+
         public bool IsValidRepoPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return false;
@@ -607,7 +653,29 @@ namespace GitWeb.Api.Services
         {
             using var repo = Open(path);
             var sig = new Signature(name, email, DateTimeOffset.Now);
-            var opts = new PullOptions { FetchOptions = new FetchOptions(), MergeOptions = new MergeOptions { FastForwardStrategy = rebase ? FastForwardStrategy.FastForwardOnly : FastForwardStrategy.Default } };
+
+            // 获取 remote URL 并尝试从系统获取凭据
+            var remote = repo.Network.Remotes.FirstOrDefault();
+            var fetchOptions = new FetchOptions();
+            if (remote != null)
+            {
+                var (username, password) = GetCredentialsFromGit(remote.Url);
+                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                {
+                    fetchOptions.CredentialsProvider = (_url, _user, _cred) =>
+                        new UsernamePasswordCredentials { Username = username, Password = password };
+                }
+            }
+
+            var opts = new PullOptions
+            {
+                FetchOptions = fetchOptions,
+                MergeOptions = new MergeOptions
+                {
+                    FastForwardStrategy = rebase ? FastForwardStrategy.FastForwardOnly : FastForwardStrategy.Default
+                }
+            };
+
             var result = Commands.Pull(repo, sig, opts);
             return result.Status.ToString();
         }
@@ -617,10 +685,21 @@ namespace GitWeb.Api.Services
             using var repo = Open(path);
             var remote = repo.Network.Remotes[remoteName];
             var opts = new PushOptions();
+
+            // 如果没有提供凭据，尝试从系统 git credential helper 获取
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                var url = remote.Url;
+                (username, password) = GetCredentialsFromGit(url);
+            }
+
+            // 设置凭据提供者
             if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
             {
-                opts.CredentialsProvider = (_url, _user, _cred) => new UsernamePasswordCredentials { Username = username, Password = password };
+                opts.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials { Username = username, Password = password };
             }
+
             repo.Network.Push(remote, repo.Head.CanonicalName, opts);
             return "OK";
         }
@@ -630,7 +709,17 @@ namespace GitWeb.Api.Services
             using var repo = Open(path);
             var remote = repo.Network.Remotes[remoteName];
             var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
-            Commands.Fetch(repo, remote.Name, refSpecs, null, null);
+
+            // 尝试从系统获取凭据
+            var fetchOptions = new FetchOptions();
+            var (username, password) = GetCredentialsFromGit(remote.Url);
+            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+            {
+                fetchOptions.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials { Username = username, Password = password };
+            }
+
+            Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, null);
         }
 
         public void StageFile(string path, string filePath)

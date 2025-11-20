@@ -1,0 +1,372 @@
+<template>
+  <v-container fluid class="pa-0 changes-view-container">
+    <v-row no-gutters style="height: 100%">
+      <!-- 左侧：文件列表区 (35%) -->
+      <v-col cols="4" class="file-list-area">
+        <!-- Unstaged 卡片 -->
+        <v-card flat class="mb-2">
+          <v-card-title class="d-flex align-center py-2 px-3 bg-grey-lighten-4">
+            <span class="text-subtitle-2">Unstaged ({{ gitStore.unstagedCount }})</span>
+            <v-spacer />
+            <v-btn
+              size="x-small"
+              variant="text"
+              @click="stageAll"
+              :disabled="gitStore.unstagedCount === 0"
+            >
+              Stage All
+            </v-btn>
+          </v-card-title>
+          <v-card-text class="pa-0 unstaged-files-container">
+            <!-- 加载状态 -->
+            <div v-if="isLoading" class="pa-4 text-center">
+              <v-progress-circular indeterminate size="24" width="2" class="mr-2" />
+              <span class="text-caption text-grey">加载文件列表中...</span>
+            </div>
+            <!-- 文件树结构 -->
+            <v-list v-else-if="gitStore.unstagedTree && gitStore.unstagedTree.length > 0" density="compact" class="py-0">
+              <TreeNodeItem
+                v-for="node in unstagedTree"
+                :key="node.path"
+                :node="node"
+                :depth="0"
+                @stage-file="stageFile"
+                @select-file="selectFile"
+              />
+            </v-list>
+            <div v-else class="pa-4 text-center text-caption text-grey">
+              无未暂存的文件
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <!-- Staged 卡片 -->
+        <v-card flat class="mb-2">
+          <v-card-title class="d-flex align-center py-2 px-3 bg-grey-lighten-4">
+            <span class="text-subtitle-2">Staged ({{ gitStore.stagedCount }})</span>
+            <v-spacer />
+            <v-btn
+              size="x-small"
+              variant="text"
+              @click="unstageAll"
+              :disabled="gitStore.stagedCount === 0"
+            >
+              Unstage All
+            </v-btn>
+          </v-card-title>
+          <v-card-text class="pa-0 staged-files-container">
+            <!-- Staged 文件树 -->
+            <v-list v-if="gitStore.stagedTree && gitStore.stagedTree.length > 0" density="compact" class="py-0">
+              <TreeNodeItem
+                v-for="node in gitStore.stagedTree"
+                :key="node.path"
+                :node="node"
+                :depth="0"
+                @stage-file="unstageFile"
+                @select-file="selectFile"
+              />
+            </v-list>
+            <div v-else class="pa-4 text-center text-caption text-grey">
+              无已暂存的文件
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <v-divider class="my-2" />
+
+        <!-- 提交信息区 -->
+        <v-card flat>
+          <v-card-text class="pa-3">
+            <div class="text-caption mb-2">提交信息：</div>
+            <v-textarea
+              v-model="commitMessage"
+              variant="outlined"
+              placeholder="输入提交消息..."
+              rows="3"
+              density="compact"
+              hide-details
+            />
+            <div class="d-flex gap-2 mt-3">
+              <v-btn
+                color="primary"
+                size="small"
+                :disabled="gitStore.stagedCount === 0 || !commitMessage"
+                @click="commit"
+              >
+                提交
+              </v-btn>
+              <v-btn
+                size="small"
+                variant="outlined"
+                @click="discardAll"
+              >
+                放弃所有变更
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- 右侧：差异查看区 (65%，暂不开发) -->
+      <v-col cols="8" class="diff-viewer-area">
+        <v-card flat height="100%" class="d-flex align-center justify-center">
+          <div class="text-center text-grey">
+            <v-icon size="64" color="grey-lighten-2">mdi-file-compare</v-icon>
+            <p class="text-body-2 mt-2">差异查看器</p>
+            <p class="text-caption">暂未开发，后续实现</p>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
+</template>
+
+<script setup>
+import { ref, computed, defineComponent, h, watch } from 'vue'
+import { useGitStore } from '../stores/git'
+import { useReposStore } from '../stores/repos'
+import { VListGroup, VListItem, VListItemTitle, VIcon, VBtn, VChip, VProgressCircular } from 'vuetify/components'
+
+const gitStore = useGitStore()
+const reposStore = useReposStore()
+const commitMessage = ref('')
+const selectedFile = ref(null)
+const isLoading = ref(false)
+
+// 监听文件列表变化，判断是否在加载中
+watch(() => gitStore.unstagedCount + gitStore.stagedCount, (newVal, oldVal) => {
+  // 如果从有数据变成没数据，说明正在加载
+  if (oldVal > 0 && newVal === 0) {
+    isLoading.value = true
+  } else if (newVal > 0) {
+    isLoading.value = false
+  }
+}, { immediate: true })
+
+// 递归树节点组件 - 优化：默认折叠以减少 DOM 节点
+const TreeNodeItem = defineComponent({
+  name: 'TreeNodeItem',
+  props: {
+    node: Object,
+    depth: Number
+  },
+  emits: ['stage-file', 'select-file'],
+  setup(props, { emit }) {
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'M': return 'orange'
+        case 'A': return 'success'
+        case 'D': return 'error'
+        case 'R': return 'info'
+        default: return 'default'
+      }
+    }
+
+    const countFiles = (node) => {
+      if (!node.isFolder) return 0
+      let count = 0
+      node.children.forEach(child => {
+        if (child.isFolder) {
+          count += countFiles(child)
+        } else {
+          count++
+        }
+      })
+      return count
+    }
+
+    return () => {
+      const { node, depth } = props
+
+      if (node.isFolder) {
+        // 文件夹节点
+        return h(VListGroup, { value: node.path }, {
+          activator: ({ props: activatorProps }) => h(VListItem, {
+            ...activatorProps,
+            class: 'file-tree-folder',
+            style: { paddingLeft: `${depth * 16}px` }
+          }, {
+            prepend: () => h(VIcon, { size: 'small' }, () => 'mdi-folder'),
+            default: () => h(VListItemTitle, { class: 'text-caption' },
+              () => `${node.name} (${countFiles(node)})`)
+          }),
+          default: () => node.children.map(child =>
+            h(TreeNodeItem, {
+              key: child.path,
+              node: child,
+              depth: depth + 1,
+              onStageFile: (path) => emit('stage-file', path),
+              onSelectFile: (file) => emit('select-file', file)
+            })
+          )
+        })
+      } else {
+        // 文件节点
+        const file = node.file
+        return h(VListItem, {
+          class: 'file-tree-item',
+          style: { paddingLeft: `${(depth + 1) * 16}px` },
+          onClick: () => emit('select-file', file)
+        }, {
+          prepend: () => h(VBtn, {
+            icon: true,
+            size: 'x-small',
+            variant: 'text',
+            onClick: (e) => {
+              e.stopPropagation()
+              emit('stage-file', file.path)
+            }
+          }, () => h(VIcon, { size: 'small', color: 'success' }, () => 'mdi-plus')),
+          default: () => h(VListItemTitle, { class: 'text-caption' }, () => [
+            node.name,
+            ' ',
+            h(VChip, {
+              size: 'x-small',
+              class: 'ml-1',
+              color: getStatusColor(file.status)
+            }, () => file.status)
+          ])
+        })
+      }
+    }
+  }
+})
+
+// 直接使用后端返回的树形结构，无需前端计算
+const unstagedTree = computed(() => gitStore.unstagedTree)
+
+// 根据文件状态返回颜色（用于 staged 文件列表）
+function getStatusColor(status) {
+  switch (status) {
+    case 'M': return 'orange' // Modified
+    case 'A': return 'success' // Added
+    case 'D': return 'error' // Deleted
+    case 'R': return 'info' // Renamed
+    default: return 'default'
+  }
+}
+
+async function stageFile(filePath) {
+  const repoPath = reposStore.activeRepo?.path
+  if (!repoPath) {
+    console.error('No active repository')
+    return
+  }
+
+  try {
+    await gitStore.stageFile(filePath, repoPath)
+  } catch (e) {
+    alert('暂存文件失败: ' + e.message)
+  }
+}
+
+async function unstageFile(filePath) {
+  const repoPath = reposStore.activeRepo?.path
+  if (!repoPath) {
+    console.error('No active repository')
+    return
+  }
+
+  try {
+    await gitStore.unstageFile(filePath, repoPath)
+  } catch (e) {
+    alert('取消暂存失败: ' + e.message)
+  }
+}
+
+async function stageAll() {
+  const repoPath = reposStore.activeRepo?.path
+  if (!repoPath) {
+    console.error('No active repository')
+    return
+  }
+
+  try {
+    await gitStore.stageAll(repoPath)
+  } catch (e) {
+    alert('暂存所有文件失败: ' + e.message)
+  }
+}
+
+async function unstageAll() {
+  const repoPath = reposStore.activeRepo?.path
+  if (!repoPath) {
+    console.error('No active repository')
+    return
+  }
+
+  try {
+    await gitStore.unstageAll(repoPath)
+  } catch (e) {
+    alert('取消暂存所有文件失败: ' + e.message)
+  }
+}
+
+function selectFile(file) {
+  selectedFile.value = file
+  // TODO: 在右侧显示文件差异
+}
+
+function commit() {
+  if (commitMessage.value && gitStore.stagedCount > 0) {
+    // TODO: 调用后端 API 提交
+    console.log('提交:', commitMessage.value)
+    alert(`已提交 ${gitStore.stagedCount} 个文件`)
+    commitMessage.value = ''
+  }
+}
+
+function discardAll() {
+  if (confirm('确定要放弃所有变更吗？')) {
+    gitStore.unstagedTree = []
+    gitStore.stagedTree = []
+    gitStore.unstagedCount = 0
+    gitStore.stagedCount = 0
+  }
+}
+</script>
+
+<style scoped>
+.changes-view-container {
+  height: 100%;
+}
+
+.file-list-area {
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.diff-viewer-area {
+  background-color: #fafafa;
+}
+
+.unstaged-files-container,
+.staged-files-container {
+  max-height: 400px;
+  overflow-y: auto;
+  /* 启用硬件加速以提升滚动性能 */
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+}
+
+.file-tree-item {
+  /* 优化渲染性能 */
+  contain: layout style paint;
+}
+
+.file-tree-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+}
+
+.file-tree-folder :deep(.v-list-item-title) {
+  font-weight: 500;
+}
+
+/* 优化大列表渲染性能 */
+.unstaged-files-container :deep(.v-list),
+.staged-files-container :deep(.v-list) {
+  contain: layout style paint;
+}
+</style>
