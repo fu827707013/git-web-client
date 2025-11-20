@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+cd /d "%~dp0"
 title Git Web Client - 生产环境打包脚本
 color 0B
 
