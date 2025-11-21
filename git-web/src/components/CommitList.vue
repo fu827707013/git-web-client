@@ -4,10 +4,10 @@
     <v-card-text>
       <v-row>
         <v-col cols="12" sm="6">
-          <v-text-field v-model="q" label="搜索提交消息" density="compact" hide-details />
+          <v-text-field v-model="q" label="搜索提交消息" :size="uiStore.componentSize" :density="uiStore.componentDensity" hide-details />
         </v-col>
         <v-col cols="12" sm="6">
-          <v-text-field v-model="author" label="作者筛选" density="compact" hide-details />
+          <v-text-field v-model="author" label="作者筛选" :size="uiStore.componentSize" :density="uiStore.componentDensity" hide-details />
         </v-col>
       </v-row>
 

@@ -4,7 +4,7 @@
     <div class="pa-3 d-flex align-center">
       <span class="text-subtitle-2 font-weight-bold">{{ repoName }}</span>
       <v-spacer />
-      <v-btn icon size="x-small" variant="text">
+      <v-btn icon :size="uiStore.componentSize" variant="text">
         <v-icon size="small">mdi-cog</v-icon>
       </v-btn>
     </div>
@@ -12,7 +12,7 @@
     <v-divider />
 
     <!-- 视图切换按钮 -->
-    <v-list density="compact" nav class="py-1">
+    <v-list  :size="uiStore.componentSize" :density="uiStore.componentDensity" nav class="py-1">
       <v-list-item
         :active="uiStore.currentView === 'changes'"
         @click="uiStore.switchView('changes')"
@@ -38,13 +38,13 @@
 
     <!-- 工具按钮（暂不开发） -->
     <div class="pa-2 d-flex justify-center">
-      <v-btn icon size="x-small" variant="text" title="历史">
+      <v-btn icon  :size="uiStore.componentSize" :density="uiStore.componentDensity" variant="text" title="历史">
         <v-icon size="small">mdi-history</v-icon>
       </v-btn>
-      <v-btn icon size="x-small" variant="text" title="搜索">
+      <v-btn icon  :size="uiStore.componentSize" :density="uiStore.componentDensity" variant="text" title="搜索">
         <v-icon size="small">mdi-magnify</v-icon>
       </v-btn>
-      <v-btn icon size="x-small" variant="text" title="刷新">
+      <v-btn icon  :size="uiStore.componentSize" :density="uiStore.componentDensity" variant="text" title="刷新">
         <v-icon size="small">mdi-refresh</v-icon>
       </v-btn>
     </div>
@@ -55,7 +55,8 @@
     <div class="pa-2">
       <v-text-field
         v-model="filterText"
-        density="compact"
+        :size="uiStore.componentSize"
+        :density="uiStore.componentDensity"
         variant="outlined"
         placeholder="筛选"
         prepend-inner-icon="mdi-magnify"
@@ -66,14 +67,14 @@
     <v-divider />
 
     <!-- 分支列表 -->
-    <v-expansion-panels variant="accordion" class="branch-panels">
+    <v-expansion-panels variant="accordion" class="branch-panels" :density="uiStore.componentDensity">
       <!-- 星标分支 -->
       <v-expansion-panel>
         <v-expansion-panel-title class="py-2">
           <span class="text-caption">星标</span>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-list density="compact" class="pa-0">
+          <v-list  :density="uiStore.componentDensity" class="pa-0">
             <v-list-item
               v-for="branch in starredBranches"
               :key="branch.name"
@@ -95,7 +96,7 @@
           <span class="text-caption">分支</span>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-list density="compact" class="pa-0">
+          <v-list  :density="uiStore.componentDensity" class="pa-0">
             <v-list-item
               v-for="branch in gitStore.branches"
               :key="branch.name"
@@ -117,7 +118,7 @@
           <span class="text-caption">远程</span>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-list density="compact" class="pa-0">
+          <v-list  :density="uiStore.componentDensity" class="pa-0">
             <v-list-item
               v-for="remote in gitStore.remotes"
               :key="remote.name"
@@ -136,7 +137,7 @@
           <span class="text-caption">标签</span>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-list density="compact" class="pa-0">
+          <v-list  :size="uiStore.componentSize" :density="uiStore.componentDensity" class="pa-0">
             <v-list-item
               v-for="tag in gitStore.tags"
               :key="tag.name"

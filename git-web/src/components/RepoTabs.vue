@@ -1,65 +1,47 @@
 <template>
-  <v-app-bar class="repo-tabs-container" color="grey-lighten-5" elevation="0" density="compact">
-    <v-tabs
-      v-model="reposStore.activeRepoId"
-      density="compact"
-      bg-color="transparent"
-      slider-color="primary"
-      show-arrows
-      class="flex-grow-1"
-    >
-      <v-tab
-        v-for="repo in reposStore.openRepos"
-        :key="repo.id"
-        :value="repo.id"
-        @click="reposStore.setActiveRepo(repo.id)"
-      >
+  <v-app-bar class="repo-tabs-container" color="grey-lighten-5" elevation="0" :density="uiStore.componentDensity"
+    :size="uiStore.componentSize">
+    <v-tabs v-model="reposStore.activeRepoId" :size="uiStore.componentSize" :density="uiStore.componentDensity"
+      bg-color="transparent" slider-color="primary" show-arrows class="flex-grow-1">
+      <v-tab v-for="repo in reposStore.openRepos" :key="repo.id" :value="repo.id"
+        @click="reposStore.setActiveRepo(repo.id)">
         {{ repo.name }}{{ repo.hasChanges ? '*' : '' }}
-        <v-btn
-          icon="mdi-close"
-          size="x-small"
-          variant="text"
-          class="ml-2"
-          @click.stop="closeRepo(repo.id)"
-        />
+        <v-btn icon="mdi-close" size="small" :density="uiStore.componentDensity" variant="text" class="ml-2"
+          @click.stop="closeRepo(repo.id)" />
       </v-tab>
 
       <!-- 添加新仓库按钮 -->
-      <v-btn
-        icon
-        size="small"
-        variant="text"
-        class="ml-2"
-        @click="openRepoDialog"
-        title="添加新仓库"
-      >
+      <v-btn icon :size="uiStore.componentSize" :density="uiStore.componentDensity" variant="text" class="ml-2"
+        @click="openRepoDialog" title="添加新仓库">
         <v-icon>mdi-plus</v-icon>
       </v-btn>
     </v-tabs>
   </v-app-bar>
 
-    <!-- 添加仓库对话框 -->
-    <v-dialog v-model="showDialog" max-width="600">
-      <v-card>
-        <v-card-title>添加仓库</v-card-title>
-        <v-card-text>
-          <!-- 集成 RepoLoader 组件 -->
-          <RepoLoader @loaded="handleRepoLoaded" />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="showDialog = false">关闭</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+  <!-- 添加仓库对话框 -->
+  <v-dialog v-model="showDialog" max-width="600" :size="uiStore.componentSize" :density="uiStore.componentDensity">
+    <v-card>
+      <v-card-title>添加仓库</v-card-title>
+      <v-card-text>
+        <!-- 集成 RepoLoader 组件 -->
+        <RepoLoader @loaded="handleRepoLoaded" />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn @click="showDialog = false" :size="uiStore.componentSize" :density="uiStore.componentDensity">关闭</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useReposStore } from '../stores/repos'
 import RepoLoader from './RepoLoader.vue'
+import { useUiStore } from '../stores/ui'
 
 const reposStore = useReposStore()
+const uiStore = useUiStore()
 const showDialog = ref(false)
 
 async function closeRepo(id) {
