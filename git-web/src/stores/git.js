@@ -300,27 +300,11 @@ export const useGitStore = defineStore('git', () => {
       console.log(`File status loaded in ${loadTime}ms, size: ${(responseSize / 1024).toFixed(2)}KB`)
 
       if (statusRes && statusRes.data) {
-        console.log('Response data:', {
-          hasUnstagedTree: !!statusRes.data.unstagedTree,
-          hasStagedTree: !!statusRes.data.stagedTree,
-          unstagedCount: statusRes.data.unstagedCount,
-          stagedCount: statusRes.data.stagedCount,
-          unstagedTreeLength: statusRes.data.unstagedTree?.length || 0,
-          stagedTreeLength: statusRes.data.stagedTree?.length || 0
-        })
-
         // 保存后端返回的树形结构和数量
         unstagedTree.value = statusRes.data.unstagedTree || []
         stagedTree.value = statusRes.data.stagedTree || []
         unstagedCount.value = statusRes.data.unstagedCount || 0
         stagedCount.value = statusRes.data.stagedCount || 0
-
-        console.log('State updated:', {
-          unstagedTreeLength: unstagedTree.value.length,
-          stagedTreeLength: stagedTree.value.length,
-          unstagedCount: unstagedCount.value,
-          stagedCount: stagedCount.value
-        })
       } else {
         console.warn('No data in response:', statusRes)
       }

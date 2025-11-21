@@ -12,15 +12,15 @@
       </v-row>
 
       <div class="d-flex flex-wrap gap-2 my-3">
-        <v-btn color="primary" @click="refresh">查询</v-btn>
-        <v-btn color="secondary" :disabled="!hasSelected" @click="downloadSelected">批量下载所选</v-btn>
-        <v-btn color="error" :disabled="!hasSelected" @click="clearSelection">清空选中</v-btn>
+        <v-btn color="primary" @click="refresh" :size="uiStore.componentSize">查询</v-btn>
+        <v-btn color="secondary" :disabled="!hasSelected" @click="downloadSelected" :size="uiStore.componentSize">批量下载所选</v-btn>
+        <v-btn color="error" :disabled="!hasSelected" @click="clearSelection" :size="uiStore.componentSize">清空选中</v-btn>
 
         <v-spacer />
 
         <v-menu>
           <template v-slot:activator="{ props }">
-            <v-btn color="info" v-bind="props">
+            <v-btn color="info" v-bind="props" :size="uiStore.componentSize">
               条件批量下载
               <v-icon end>mdi-menu-down</v-icon>
             </v-btn>
@@ -37,7 +37,7 @@
       </div>
 
       <!-- 提交记录列表 -->
-      <v-data-table
+      <v-data-table :size="uiStore.componentSize" :density="uiStore.componentDensity"
         :headers="headers"
         :items="items"
         :items-per-page="-1"
@@ -56,6 +56,7 @@
                 @update:model-value="(val) => toggle(item.sha, val)"
                 @click.stop
                 hide-details
+                :size="uiStore.componentSize"
               />
             </td>
             <td><span class="text-mono">{{ item.sha?.substring(0, 7) }}</span></td>
@@ -66,6 +67,7 @@
               <div class="d-flex gap-1">
                 <v-btn
                   color="primary"
+                  :size="uiStore.componentSize"
                   @click.stop="downloadCommit(item.sha)"
                 >
                   下载
@@ -74,6 +76,7 @@
                   variant="outlined"
                   @click.stop="copySha(item.sha)"
                   title="复制SHA"
+                  :size="uiStore.componentSize"
                 >
                   <v-icon>mdi-content-copy</v-icon>
                 </v-btn>
@@ -204,10 +207,12 @@
 </template>
 <script setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { useUiStore } from '../stores/ui'
 import api from '../api'
 import CommitDetailDialog from './CommitDetailDialog.vue'
 
 const props = defineProps({ path: String })
+const uiStore = useUiStore()
 const page = ref(1)
 const pageSize = ref(20)
 const q = ref('')

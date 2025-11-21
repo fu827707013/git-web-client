@@ -59,16 +59,12 @@ export const useUiStore = defineStore('ui', () => {
   function setComponentSize(size) {
     componentSize.value = size
     localStorage.setItem('componentSize', size)
-    // 刷新页面以应用新设置
-    window.location.reload()
   }
 
   // 设置组件密度
   function setComponentDensity(density) {
     componentDensity.value = density
     localStorage.setItem('componentDensity', density)
-    // 刷新页面以应用新设置
-    window.location.reload()
   }
 
   // 初始化 UI 设置

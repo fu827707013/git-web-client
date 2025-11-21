@@ -1,13 +1,13 @@
 <template>
   <v-app-bar color="grey-lighten-4" elevation="0" density="compact">
     <template v-slot:prepend>
-      <v-btn icon size="small" title="快速启动">
+      <v-btn icon :size="uiStore.componentSize" title="快速启动">
         <v-icon>mdi-play-circle-outline</v-icon>
       </v-btn>
     </template>
 
     <v-btn
-      size="small"
+      :size="uiStore.componentSize"
       variant="text"
       title="拉取"
       @click="handlePull"
@@ -19,7 +19,7 @@
     </v-btn>
 
     <v-btn
-      size="small"
+      :size="uiStore.componentSize"
       variant="text"
       title="推送"
       @click="handlePush"
@@ -38,7 +38,7 @@
     </v-btn>
 
     <v-btn
-      size="small"
+      :size="uiStore.componentSize"
       variant="text"
       title="获取（Fetch）"
       @click="handleFetch"
@@ -51,7 +51,7 @@
 
     <v-menu>
       <template v-slot:activator="{ props }">
-        <v-btn size="small" variant="text" v-bind="props">
+        <v-btn  :size="uiStore.componentSize" variant="text" v-bind="props">
           更多
           <v-icon end>mdi-menu-down</v-icon>
         </v-btn>
@@ -71,7 +71,7 @@
     <!-- 组件大小设置 -->
     <v-menu>
       <template v-slot:activator="{ props }">
-        <v-btn variant="text" v-bind="props" title="组件大小">
+        <v-btn variant="text" v-bind="props" title="组件大小" :size="uiStore.componentSize">
           <v-icon start>mdi-resize</v-icon>
           {{ uiStore.componentSize }}
         </v-btn>
@@ -91,7 +91,7 @@
     <!-- 组件密度设置 -->
     <v-menu>
       <template v-slot:activator="{ props }">
-        <v-btn variant="text" v-bind="props" title="组件密度">
+        <v-btn variant="text" v-bind="props" title="组件密度" :size="uiStore.componentSize">
           <v-icon start>mdi-view-compact</v-icon>
           {{ uiStore.componentDensity }}
         </v-btn>
@@ -108,11 +108,11 @@
       </v-list>
     </v-menu>
 
-    <v-btn icon @click="uiStore.toggleTheme()" title="切换主题">
+    <v-btn icon @click="uiStore.toggleTheme()" title="切换主题" :size="uiStore.componentSize">
       <v-icon>{{ uiStore.theme === 'light' ? 'mdi-weather-night' : 'mdi-weather-sunny' }}</v-icon>
     </v-btn>
 
-    <v-btn icon title="设置">
+    <v-btn icon title="设置" :size="uiStore.componentSize">
       <v-icon>mdi-cog</v-icon>
     </v-btn>
   </v-app-bar>
