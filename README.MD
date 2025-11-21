@@ -1,11 +1,12 @@
-# Git Web 管理工具
+# Git 仓库可视化管理工具
 
 ## 项目简介
 
-**项目名称**：Git Web 管理工具
-**项目定位**：面向个人开发者的轻量级本地 Git 仓库管理工具
+**项目名称**：Git 仓库可视化管理工具
+**项目定位**：基于 Electron + Vue 3 的桌面端 Git 仓库管理工具，提供直观的可视化操作界面
+**核心价值**：简化 Git 仓库管理流程，提供图形化的提交历史查看和文件管理功能
 **部署方式**：Windows 桌面客户端 (Electron) / Web 浏览器
-**架构模式**：前后端分离，支持 Electron 桌面应用和 Web 应用两种模式
+**架构模式**：前后端分离架构，Vue 3 + Vuetify UI + .NET Core Web API
 
 ---
 
@@ -49,36 +50,36 @@
 
 ## 核心特性
 
-### 🎯 仓库管理
-- ✅ 支持添加和保存多个本地 Git 仓库
-- ✅ 仓库名称自定义管理
-- ✅ 最近访问时间记录
-- ✅ 快速切换不同仓库
-- ✅ 仓库配置持久化存储（后端 JSON 文件）
+### 🎯 多仓库管理
+- ✅ **Tab 标签页管理**：支持同时打开多个仓库，Tab 切换操作
+- ✅ **仓库配置持久化**：仓库信息自动保存，下次启动恢复
+- ✅ **快速添加仓库**：通过 + 按钮快速添加本地 Git 仓库
+- ✅ **仓库状态提示**：Tab 标签显示未保存更改状态（*标记）
+- ✅ **最近访问记录**：自动记录和排序最近使用的仓库
 
-### 📊 提交历史
-- ✅ 分页加载提交记录
-- ✅ 按提交消息搜索
-- ✅ 按作者筛选
-- ✅ 单个提交下载
-- ✅ 批量提交下载（多选 + Shift 范围选择）
-- ✅ 右键菜单快捷操作（查看详情、下载、复制 SHA）
+### 📊 提交历史查看
+- ✅ **分页加载**：高效处理大型仓库，支持滚动加载更多
+- ✅ **智能搜索**：按提交消息关键词实时搜索
+- ✅ **作者筛选**：按提交作者过滤显示
+- ✅ **批量选择**：支持 Shift 键范围选择和 Ctrl 键多选
+- ✅ **右键菜单**：查看详情、下载文件、复制 SHA 等快捷操作
+- ✅ **视觉化分支线**：图形化显示分支合并关系
 
-### 📁 文件详情
-- ✅ 树形目录结构展示
-- ✅ 文件状态可视化（Added、Modified、Deleted、Renamed 等）
-- ✅ 递归文件夹展开/折叠
-- ✅ 全部展开/折叠控制
-- ✅ 文件搜索过滤
-- ✅ 变更文件统计
+### 📁 文件管理
+- ✅ **树形文件结构**：按目录层级组织，直观展示项目结构
+- ✅ **状态标识**：彩色标签区分 Added、Modified、Deleted、Renamed 等状态
+- ✅ **智能折叠**：支持全部展开/折叠，记忆用户操作
+- ✅ **文件搜索**：快速过滤定位特定文件
+- ✅ **批量下载**：支持单个或批量提交的文件下载
+- ✅ **变更统计**：实时显示变更文件数量和类型
 
-### 🎨 用户体验
-- ✅ 现代化 Material Design 界面
-- ✅ 响应式布局设计
-- ✅ 深色/浅色主题切换
-- ✅ 侧边栏导航抽屉
-- ✅ 加载状态反馈
-- ✅ 错误提示友好
+### 🎨 现代化界面
+- ✅ **Material Design 3**：采用最新的 Material Design 设计规范
+- ✅ **深色/浅色主题**：一键切换，自动保存用户偏好
+- ✅ **响应式布局**：自适应不同屏幕尺寸
+- ✅ **左侧导航栏**：分支管理、标签查看、暂存区操作
+- ✅ **底部详情面板**：可折叠的提交详情查看区域
+- ✅ **流畅动画**：平滑的过渡效果和交互反馈
 
 ---
 
@@ -86,16 +87,19 @@
 
 ### 前端技术
 - **框架**：Vue 3.3+ (Composition API)
-- **UI 组件库**：Vuetify 3.0+
-- **HTTP 客户端**：Axios
+- **UI 组件库**：Vuetify 3.10+（Material Design 3）
+- **状态管理**：Pinia 3.0+
+- **HTTP 客户端**：Axios 1.7+
+- **树形组件**：@he-tree/vue 2.10+
 - **构建工具**：Vite 5.0+
 - **桌面框架**：Electron 39+
-- **包管理器**：npm
+- **包管理器**：npm/yarn
 
 ### 后端技术
-- **框架**：.NET 10 (ASP.NET Core Web API)
+- **框架**：.NET Core 10 (ASP.NET Core Web API)
 - **Git 操作库**：LibGit2Sharp
 - **序列化**：System.Text.Json
+- **CORS 支持**：Microsoft.AspNetCore.Cors
 - **C# 版本**：C# 12+
 
 ### 开发环境要求
@@ -103,6 +107,7 @@
 - **.NET SDK**: 10.0+
 - **Git**: 2.40+
 - **操作系统**: Windows 10/11 (64位)
+- **IDE 推荐**: VS Code / Visual Studio 2022
 
 ---
 
@@ -110,29 +115,51 @@
 
 ```
 git-cliient/
-├── git-web/                    # 前端项目
-│   ├── electron/              # Electron 主进程代码
-│   │   ├── main.js           # 主进程入口
-│   │   └── preload.js        # 预加载脚本
-│   ├── src/                  # Vue 3 源码
-│   │   ├── components/       # 组件
-│   │   ├── api.js           # API 配置
-│   │   ├── App.vue          # 根组件
-│   │   └── main.js          # 入口文件
-│   ├── resources/            # 应用资源（图标等）
-│   ├── dist/                 # 前端构建产物
-│   ├── dist-electron/        # Electron 构建产物
-│   ├── release/              # 打包后的安装程序
-│   ├── vite.config.js        # Vite 配置
-│   ├── electron-builder.json # Electron 打包配置
-│   └── package.json          # 项目配置
-├── server/                    # 后端 .NET 项目
-│   ├── Controllers/          # API 控制器
-│   ├── Services/             # 业务服务
-│   ├── Program.cs            # 启动入口
-│   └── ...
-├── ELECTRON_INTEGRATION.md    # Electron 集成技术文档
-└── README.MD                  # 本文档
+├── git-web/                          # 前端项目
+│   ├── electron/                    # Electron 主进程代码
+│   │   ├── main.js                 # 主进程入口（窗口管理）
+│   │   └── preload.js              # 预加载脚本（安全桥接）
+│   ├── src/                        # Vue 3 源码
+│   │   ├── components/             # UI 组件
+│   │   │   ├── Toolbar.vue        # 顶部工具栏
+│   │   │   ├── RepoTabs.vue       # 仓库Tab标签栏
+│   │   │   ├── LeftNavigation.vue # 左侧导航面板
+│   │   │   ├── CommitList.vue     # 提交历史列表
+│   │   │   ├── ChangesView.vue    # 文件变更视图
+│   │   │   └── BottomDetailPanel.vue # 底部详情面板
+│   │   ├── stores/                # Pinia 状态管理
+│   │   │   ├── repos.js          # 仓库管理
+│   │   │   ├── git.js            # Git 操作
+│   │   │   └── ui.js             # UI 状态
+│   │   ├── api.js                # API 接口封装
+│   │   ├── App.vue               # 根组件
+│   │   └── main.js               # 应用入口
+│   ├── resources/                 # 应用资源
+│   │   └── icon.ico              # Windows 应用图标
+│   ├── dist/                      # 前端构建输出
+│   ├── dist-electron/             # Electron 构建输出
+│   ├── release/                   # 安装包输出目录
+│   ├── vite.config.js            # Vite 配置
+│   ├── electron-builder.json     # Electron 打包配置
+│   └── package.json              # 项目依赖配置
+├── server/                         # 后端 .NET 项目
+│   ├── Controllers/              # API 控制器
+│   │   ├── GitController.cs    # Git 操作接口
+│   │   └── RepoController.cs   # 仓库管理接口
+│   ├── Services/                # 业务服务层
+│   │   ├── GitService.cs       # Git 操作服务
+│   │   └── RepoConfigService.cs # 仓库配置服务
+│   ├── Properties/              # 项目属性
+│   ├── Program.cs              # 应用启动入口
+│   └── GitWeb.Api.csproj       # 项目文件
+├── .github/                     # GitHub 配置
+├── README.MD                    # 项目主文档
+├── QUICK_START.md              # 快速上手指南
+├── ELECTRON_INTEGRATION.md     # Electron 集成文档
+├── DOCS_INDEX.md              # 文档索引
+├── LAYOUT_FINAL.MD            # 界面布局设计文档
+├── start-dev.bat              # 开发环境启动脚本
+└── build-release.bat          # 生产打包脚本
 ```
 
 ---
@@ -603,35 +630,39 @@ taskkill /PID <进程ID> /F
 
 ### 当前版本
 
-**v1.0.0** - Electron 桌面客户端版本
+**v1.0.0** - 初始发布版本（2025-11）
 
-**主要功能**：
-- ✅ 支持多仓库管理
-- ✅ 提交历史查看和搜索
-- ✅ 树形文件结构展示
-- ✅ 单个/批量提交下载
-- ✅ 深色/浅色主题切换
-- ✅ Windows 桌面客户端支持
-- ✅ 自包含 .NET 运行时，无需用户安装
+**已实现功能**：
+- ✅ **多仓库管理**：Tab 标签页切换，支持同时管理多个仓库
+- ✅ **提交历史**：分页加载、搜索筛选、批量选择
+- ✅ **文件变更**：树形结构展示、状态标识、文件搜索
+- ✅ **文件下载**：单个/批量提交文件下载，保持目录结构
+- ✅ **视图切换**：All Commits 视图和 Changes 视图
+- ✅ **主题系统**：深色/浅色主题切换，自动保存偏好
+- ✅ **Electron 集成**：Windows 桌面客户端，一键安装使用
+- ✅ **自包含部署**：内置 .NET 运行时，无需额外安装
 
 ### 版本规划
 
-**v1.1.0** (计划中)
-- [ ] 应用自动更新功能
-- [ ] 托盘图标和最小化到托盘
-- [ ] 自定义端口号配置
-- [ ] 多语言支持（中文/英文）
+**v1.1.0** (开发中)
+- [ ] **Git 基础操作**：实现 Pull、Push、Fetch 功能
+- [ ] **提交功能**：支持暂存、提交、撤销操作
+- [ ] **分支管理**：创建、切换、合并、删除分支
+- [ ] **冲突解决**：可视化冲突解决工具
 
 **v1.2.0** (计划中)
-- [ ] Git 操作支持（Pull、Push、Commit）
-- [ ] 文件 Diff 对比查看
-- [ ] 分支管理功能
-- [ ] 标签（Tag）管理
+- [ ] **文件对比**：Diff 视图，支持并排和内联对比
+- [ ] **标签管理**：创建、删除、推送标签
+- [ ] **贮藏功能**：Stash 操作支持
+- [ ] **Cherry-pick**：选择性合并提交
+- [ ] **交互式变基**：图形化 rebase 操作
 
-**v2.0.0** (计划中)
-- [ ] macOS 和 Linux 平台支持
-- [ ] 云端仓库配置同步
-- [ ] 团队协作功能
+**v2.0.0** (长期规划)
+- [ ] **跨平台支持**：macOS 和 Linux 版本
+- [ ] **远程仓库管理**：支持 GitHub、GitLab、Gitee 集成
+- [ ] **团队协作**：PR/MR 管理、代码审查功能
+- [ ] **插件系统**：支持第三方扩展
+- [ ] **性能优化**：大型仓库加载优化，虚拟滚动
 
 ---
 
@@ -689,4 +720,4 @@ taskkill /PID <进程ID> /F
 
 ---
 
-**最后更新时间**：2025-11-18
+**最后更新时间**：2025-11-21
