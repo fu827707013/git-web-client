@@ -1,5 +1,7 @@
 @echo off
 chcp 65001 >nul
+:: 强制切换到本批处理文件所在目录，避免从其他工作目录（如 System32）启动时相对路径失效
+cd /d "%~dp0"
 title Git Web Client - 开发环境启动器
 color 0A
 
@@ -36,48 +38,47 @@ echo.
 :: 检查是否首次运行（检查 node_modules）
 if not exist "git-web\node_modules\" (
     echo [首次运行] 检测到首次运行，正在安装前端依赖...
-    cd git-web
+    pushd git-web
+    if %errorlevel% neq 0 (
+        echo [错误] 无法进入 git-web 目录
+        pause
+        exit /b 1
+    )
     call npm install
     if %errorlevel% neq 0 (
+        popd
         echo [错误] 前端依赖安装失败
         pause
         exit /b 1
     )
-    cd ..
+    popd
     echo [完成] 前端依赖安装完成
     echo.
 )
 
 :: 启动后端 API
-echo [1/3] 正在启动后端 API（端口 9002）...
+echo [1/2] 正在启动后端 API（端口 9002）...
 start "Git Web Client - Backend API" cmd /k "cd server && dotnet run --urls http://localhost:9002"
 timeout /t 3 /nobreak >nul
 echo       后端 API 已在新窗口中启动
 echo.
 
-:: 启动前端开发服务器
-echo [2/3] 正在启动前端开发服务器（端口 9001）...
+:: 启动前端开发服务器（Vite 会经由 vite-plugin-electron 自动拉起 Electron 桌面应用，无需单独启动）
+echo [2/2] 正在启动前端开发服务器与 Electron 桌面应用（端口 9001）...
 start "Git Web Client - Frontend" cmd /k "cd git-web && npm run electron:dev"
 timeout /t 8 /nobreak >nul
 echo       前端开发服务器已在新窗口中启动
-echo.
-
-:: 启动 Electron 应用
-echo [3/3] 正在启动 Electron 桌面应用...
-cd git-web
-start "Git Web Client - Electron" cmd /k "npm run electron:start"
-cd ..
+echo       Electron 桌面应用由 Vite 自动拉起（开发模式，连接 9001）
 echo.
 
 echo ========================================
 echo   启动完成！
 echo ========================================
 echo.
-echo   应用窗口应该已经打开
-echo   如果没有，请检查以下终端窗口的错误信息：
-echo   - Git Web Client - Backend API
-echo   - Git Web Client - Frontend
-echo   - Git Web Client - Electron
+echo   应用窗口应该已经打开：
+echo   - 后端 API 终端窗口（Git Web Client - Backend API）
+echo   - 前端/Vite 终端窗口（Git Web Client - Frontend）
+echo   - Electron 桌面应用窗口（由 Vite 自动拉起，已连接 9001）
 echo.
 echo   开发者工具快捷键: F12
 echo   刷新应用快捷键: Ctrl + R
